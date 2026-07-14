@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "build": "mkdir -p dist/.openai && cp -R src demo README.md dist/ && cp .openai/hosting.json dist/.openai/hosting.json",
+    "build": "rm -rf dist && mkdir -p dist/server dist/client && cp -R src demo README.md dist/client/ && cp server.mjs dist/server/index.js",
     "start": "npx serve .",
     "test": "node --test tests/*.test.mjs"
   },
