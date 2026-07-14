@@ -1,0 +1,11 @@
+{
+  "name": "obs-html-animations",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "mkdir -p dist && cp -R src demo README.md dist/",
+    "start": "npx serve .",
+    "test": "node --test tests/*.test.mjs"
+  },
+  "type": "module"
+}

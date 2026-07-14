@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OBS — Swarm of Butterflies</title>
+  <style>
+    html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent}#stage{position:fixed;inset:0;pointer-events:none}.butterfly{position:absolute;left:-10vw;top:var(--y);font:var(--size)/1 serif;filter:drop-shadow(0 2px 2px #21134d77);animation:fly var(--duration) linear forwards,flutter .18s ease-in-out infinite alternate}@keyframes fly{to{transform:translate(120vw,var(--drop)) rotate(18deg);opacity:0}}@keyframes flutter{to{scale:1.23 .75;rotate:8deg}}
+  </style>
+  <script src="https://unpkg.com/comfy.js@latest/dist/comfy.min.js"></script>
+</head>
+<body>
+  <div id="stage" aria-hidden="true"></div>
+  <script>
+    // Configuration — adjust these values for this browser source.
+    const CONFIG = { count: 32, duration: 6500, delay: 115, minSize: 26, maxSize: 64, colors: ['#d88cff','#67d9ff','#ffd866','#ff8bb8'] };
+    // Constants
+    const TWITCH = { enabled: false, channel: "your_twitch_channel", command: "!butterflies" };
+    const stage=document.querySelector('#stage'),random=(a,b)=>Math.random()*(b-a)+a;
+    // Main animation logic
+    function play(){for(let i=0;i<CONFIG.count;i++)setTimeout(()=>{const b=document.createElement('span');b.className='butterfly';b.textContent='🦋';b.style.setProperty('--y',`${random(5,88)}vh`);b.style.setProperty('--drop',`${random(-14,14)}vh`);b.style.setProperty('--duration',`${CONFIG.duration+random(-900,900)}ms`);b.style.setProperty('--size',`${random(CONFIG.minSize,CONFIG.maxSize)}px`);b.style.color=CONFIG.colors[i%CONFIG.colors.length];stage.append(b);b.addEventListener('animationend',()=>b.remove())},i*CONFIG.delay)}
+    // Twitch trigger with ComfyJS
+    if(location.search.includes('preview'))play();
+    if(TWITCH.enabled){ComfyJS.onCommand=(_,command)=>{if(`!${command}`.toLowerCase()===TWITCH.command.toLowerCase())play()};ComfyJS.Init(TWITCH.channel)}
+  </script>
+</body>
+</html>
