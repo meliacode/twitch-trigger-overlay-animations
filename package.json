@@ -1,5 +1,6 @@
 {
-  "name": "obs-html-animations",
+  "name": "twitch-trigger-overlay-animations",
+  "description": "Standalone HTML overlay animations triggered by Twitch chat",
   "version": "1.0.0",
   "private": true,
   "scripts": {

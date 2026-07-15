@@ -1,6 +1,6 @@
-# OBS HTML Animations
+# Twitch Trigger Overlay Animations
 
-A collection of transparent, standalone HTML animations for [OBS Studio](https://obsproject.com/). Each animation can be added as a Browser source and triggered locally for preview or from Twitch chat with a command.
+A collection of transparent, standalone HTML animations for [OBS Studio](https://obsproject.com/), designed to be triggered by Twitch chat. Each animation can be added as a Browser source and triggered locally for preview or from Twitch chat with a command.
 
 No build step is required for the animations themselves. Each source lives in its own folder, keeps its editable settings in a `CONFIG` object, and includes a matching configuration reference.
 
