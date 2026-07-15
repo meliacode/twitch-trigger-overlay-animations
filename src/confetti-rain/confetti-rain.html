@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Confetti Rain</title>
+
+    <style>
+      /* Transparent background is required for OBS overlays */
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: transparent;
+        font-family: sans-serif;
+      }
+
+      /*  --- STYLE ELEMENTS ---  */
+
+      /* Primary container holding the overlay elements */
+      #confetti-container {
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+      }
+
+      /* Individual confetti piece */
+      .piece {
+        position: absolute;
+        top: -4vh;
+        width: var(--w);
+        height: var(--h);
+        background: var(--color);
+        border-radius: 2px;
+        animation: fall var(--duration) cubic-bezier(0.2, 0.65, 0.45, 1)
+          forwards;
+      }
+
+      /*  --- ANIMATIONS KEYFRAMES --- */
+
+      @keyframes fall {
+        to {
+          transform: translate3d(var(--drift), 112vh, 0) rotate(var(--spin));
+          opacity: 0.2;
+        }
+      }
+    </style>
+
+    <script src="https://unpkg.com/comfy.js@latest/dist/comfy.min.js"></script>
+  </head>
+  <body>
+    <div id="confetti-container"></div>
+
+    <script>
+      // ==========================================
+      // 1. CONFIGURATION
+      // ==========================================
+
+      const COLOR_OPTIONS = {
+        white: "#ffffff",
+        red: "#ff3b30",
+        pink: "#ff4081",
+        purple: "#a855f7",
+        blueDark: "#1d4ed8",
+        blueLight: "#00d4ff",
+        green: "#44e09c",
+        yellow: "#ffeb3b",
+        orange: "#ff9800",
+      };
+
+      const CONFIG = {
+        count: 180,
+        duration: 4200,
+        delay: 13,
+        colors: [
+          "white",
+          "red",
+          "pink",
+          "purple",
+          "blueDark",
+          "blueLight",
+          "green",
+          "yellow",
+          "orange",
+        ],
+      };
+
+      const TWITCH = {
+        enabled: false,
+        channel: "your_twitch_channel",
+        command: "!confetti-rain",
+      };
+
+      // ==========================================
+      // 2. CONSTANTS
+      // ==========================================
+
+      const container = document.querySelector("#confetti-container");
+      const random = (a, b) => Math.random() * (b - a) + a;
+
+      // ==========================================
+      // 3. ANIMATION
+      // ==========================================
+
+      function play() {
+        for (let i = 0; i < CONFIG.count; i++)
+          setTimeout(() => {
+            const p = document.createElement("i");
+            p.className = "piece";
+            p.style.left = `${random(0, 100)}vw`;
+            p.style.setProperty("--w", `${random(6, 13)}px`);
+            p.style.setProperty("--h", `${random(8, 21)}px`);
+            p.style.setProperty(
+              "--color",
+              COLOR_OPTIONS[CONFIG.colors[i % CONFIG.colors.length]] ??
+                CONFIG.colors[i % CONFIG.colors.length],
+            );
+            p.style.setProperty(
+              "--duration",
+              `${CONFIG.duration + random(-850, 950)}ms`,
+            );
+            p.style.setProperty("--drift", `${random(-18, 18)}vw`);
+            p.style.setProperty("--spin", `${random(360, 1260)}deg`);
+            container.append(p);
+            p.addEventListener("animationend", () => p.remove());
+          }, i * CONFIG.delay);
+      }
+
+      // ==========================================
+      // 3. CALLBACK (COMFYJS)
+      // ==========================================
+
+      if (location.search.includes("preview")) play();
+
+      if (TWITCH.enabled) {
+        ComfyJS.onCommand = (_, command) => {
+          if (`!${command}`.toLowerCase() === TWITCH.command.toLowerCase())
+            play();
+        };
+        ComfyJS.Init(TWITCH.channel);
+      }
+    </script>
+  </body>
+</html>
