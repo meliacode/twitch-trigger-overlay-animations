@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Party Lights Laser</title>
+
+    <style>
+      /* Transparent background is required for OBS overlays */
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: transparent;
+        font-family: sans-serif;
+      }
+
+      /*  --- STYLE ELEMENTS ---  */
+
+      /* Primary container holding the overlay elements */
+      #party-container {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none; /* Allows clicks to pass through the overlay */
+        opacity: 0;
+        transition: opacity 1s ease-in-out; /* Smooth fade-in/fade-out transition */
+      }
+
+      #party-container.active {
+        opacity: 1;
+      }
+
+      /* Spotlight effect (Soft wide cones)*/
+      .spotlight {
+        position: absolute;
+        top: -10%;
+        width: 300px;
+        height: 150%;
+        background: conic-gradient(
+          from 160deg at 50% 0%,
+          rgba(255, 255, 255, 0) 0deg,
+          rgba(255, 255, 255, 0) 10deg,
+          rgba(255, 255, 255, 0.25) 20deg,
+          rgba(255, 255, 255, 0.4) 30deg,
+          rgba(255, 255, 255, 0.25) 40deg,
+          rgba(255, 255, 255, 0) 50deg
+        );
+        filter: blur(15px);
+        transform-origin: top center;
+        mix-blend-mode: screen;
+      }
+
+      .spot-blue {
+        right: 20%;
+        animation: swing-right 6s ease-in-out infinite alternate;
+        background-image: conic-gradient(
+          from 160deg at 50% 0%,
+          rgba(0, 240, 255, 0),
+          rgba(0, 240, 255, 0.35),
+          rgba(0, 240, 255, 0)
+        );
+      }
+
+      .spot-purple {
+        left: 30%;
+        animation: swing-center 5.5s ease-in-out infinite alternate;
+        background-image: conic-gradient(
+          from 160deg at 50% 0%,
+          rgba(168, 85, 247, 0),
+          rgba(168, 85, 247, 0.3),
+          rgba(168, 85, 247, 0)
+        );
+      }
+
+      .spot-pink {
+        left: 40%;
+        animation: swing-left 5s ease-in-out infinite alternate;
+        background-image: conic-gradient(
+          from 160deg at 50% 0%,
+          rgba(255, 0, 128, 0),
+          rgba(255, 0, 128, 0.35),
+          rgba(255, 0, 128, 0)
+        );
+      }
+
+      .spot-yellow {
+        left: 60%;
+        animation: swing-right 4.5s ease-in-out infinite alternate;
+        background-image: conic-gradient(
+          from 160deg at 50% 0%,
+          rgba(255, 214, 10, 0),
+          rgba(255, 214, 10, 0.28),
+          rgba(255, 214, 10, 0)
+        );
+      }
+
+      .spot-orange {
+        left: 70%;
+        animation: swing-center 5.5s ease-in-out infinite alternate;
+        background-image: conic-gradient(
+          from 160deg at 50% 0%,
+          rgba(255, 140, 0, 0),
+          rgba(255, 140, 0, 0.3),
+          rgba(255, 140, 0, 0)
+        );
+      }
+
+      .spot-green {
+        left: 80%;
+        transform: translateX(-50%);
+        animation: swing-left 4s ease-in-out infinite alternate;
+        background-image: conic-gradient(
+          from 160deg at 50% 0%,
+          rgba(255, 230, 0, 0),
+          rgba(0, 255, 30, 0.3),
+          rgba(255, 230, 0, 0)
+        );
+      }
+
+      /* Laser effect (sharp fast beams) */
+      .laser-container {
+        position: absolute;
+        bottom: 0;
+        width: 100%;
+        height: 100%;
+      }
+
+      .laser {
+        position: absolute;
+        bottom: 0;
+        width: 4px;
+        height: 120%;
+        background: #fff;
+        transform-origin: bottom center;
+        mix-blend-mode: screen;
+      }
+
+      .laser-blue {
+        left: 20%;
+        box-shadow:
+          0 0 15px #00ffff,
+          0 0 30px #00ffff;
+        animation: laser-sweep-blue 1.8s ease-in-out infinite alternate;
+      }
+
+      .laser-purple {
+        left: 30%;
+        box-shadow:
+          0 0 15px #a855f7,
+          0 0 30px #a855f7;
+        animation: laser-sweep-purple 1.7s ease-in-out infinite alternate;
+      }
+
+      .laser-pink {
+        left: 40%;
+        box-shadow:
+          0 0 15px #ff007f,
+          0 0 30px #ff007f;
+        animation: laser-sweep-pink 1.5s ease-in-out infinite alternate;
+      }
+
+      .laser-yellow {
+        left: 60%;
+        box-shadow:
+          0 0 15px #ffd60a,
+          0 0 30px #ffd60a;
+        animation: laser-sweep-yellow 2s ease-in-out infinite alternate;
+      }
+
+      .laser-orange {
+        left: 70%;
+        box-shadow:
+          0 0 15px #ff8c00,
+          0 0 30px #ff8c00;
+        animation: laser-sweep-orange 2.4s ease-in-out infinite alternate;
+      }
+
+      .laser-green {
+        left: 80%;
+        box-shadow:
+          0 0 15px #00ff66,
+          0 0 30px #00ff66;
+        animation: laser-sweep-green 2.2s ease-in-out infinite alternate;
+      }
+
+      /*  --- ANIMATIONS KEYFRAMES --- */
+
+      /* Swing animation */
+      @keyframes swing-left {
+        0% {
+          transform: rotate(-25deg);
+        }
+        100% {
+          transform: rotate(15deg);
+        }
+      }
+
+      @keyframes swing-right {
+        0% {
+          transform: rotate(25deg);
+        }
+        100% {
+          transform: rotate(-15deg);
+        }
+      }
+
+      @keyframes swing-center {
+        0% {
+          transform: translateX(-50%) rotate(-10deg);
+        }
+        100% {
+          transform: translateX(-50%) rotate(10deg);
+        }
+      }
+
+      /* Laser animation */
+      @keyframes laser-sweep-pink {
+        0% {
+          transform: rotate(-45deg) scaleY(1.2);
+        }
+        100% {
+          transform: rotate(10deg) scaleY(1.2);
+        }
+      }
+
+      @keyframes laser-sweep-blue {
+        0% {
+          transform: rotate(45deg) scaleY(1.2);
+        }
+        100% {
+          transform: rotate(-15deg) scaleY(1.2);
+        }
+      }
+
+      @keyframes laser-sweep-green {
+        0% {
+          transform: rotate(-15deg) scaleY(1.2);
+        }
+        100% {
+          transform: rotate(15deg) scaleY(1.2);
+        }
+      }
+
+      @keyframes laser-sweep-purple {
+        0% {
+          transform: rotate(-30deg) scaleY(1.2);
+        }
+        100% {
+          transform: rotate(25deg) scaleY(1.2);
+        }
+      }
+
+      @keyframes laser-sweep-yellow {
+        0% {
+          transform: rotate(35deg) scaleY(1.2);
+        }
+        100% {
+          transform: rotate(-20deg) scaleY(1.2);
+        }
+      }
+
+      @keyframes laser-sweep-orange {
+        0% {
+          transform: rotate(-25deg) scaleY(1.2);
+        }
+        100% {
+          transform: rotate(30deg) scaleY(1.2);
+        }
+      }
+    </style>
+
+    <script src="https://cdn.jsdelivr.net/npm/comfy.js@latest/dist/comfy.min.js"></script>
+  </head>
+  <body>
+    <div id="party-container">
+      <!-- Ambient spotlights (Soft & background-focused) -->
+      <div class="spotlight spot-blue"></div>
+      <div class="spotlight spot-green"></div>
+      <div class="spotlight spot-orange"></div>
+      <div class="spotlight spot-pink"></div>
+      <div class="spotlight spot-purple"></div>
+      <div class="spotlight spot-yellow"></div>
+
+      <!-- Active stage lasers (Fast & sharp foreground-focused) -->
+      <div class="laser-container">
+        <div class="laser laser-blue"></div>
+        <div class="laser laser-green"></div>
+        <div class="laser laser-orange"></div>
+        <div class="laser laser-pink"></div>
+        <div class="laser laser-purple"></div>
+        <div class="laser laser-yellow"></div>
+      </div>
+    </div>
+
+    <script>
+      // ==========================================
+      // 1. CONFIGURATION
+      // ==========================================
+
+      const CONFIG = { duration: 10000, fadeDuration: 1000 };
+
+      const TWITCH = {
+        enabled: false,
+        channel: "your_twitch_channel",
+        command: "!party-laser",
+      };
+
+      // ==========================================
+      // 2. CONSTANTS
+      // ==========================================
+
+      const container = document.getElementById("party-container");
+
+      let partyTimeout; // Stores the active countdown reference to prevent timer stacking
+
+      // ==========================================
+      // 3. ANIMATION
+      // ==========================================
+
+      // Toggles the opacity classes and schedules the automatic clean shutoff
+      function triggerParty() {
+        container.style.transitionDuration = `${CONFIG.fadeDuration}ms`;
+
+        if (container.classList.contains("active")) {
+          clearTimeout(partyTimeout); // Extend current active duration if triggered again
+        } else {
+          container.classList.add("active");
+        }
+
+        // Automatically fade out the display after the duration limit expires
+        partyTimeout = setTimeout(() => {
+          container.classList.remove("active");
+        }, CONFIG.duration);
+      }
+
+      // ==========================================
+      // 3. CALLBACK (COMFYJS)
+      // ==========================================
+
+      if (location.search.includes("preview")) triggerParty();
+
+      if (TWITCH.enabled) {
+        ComfyJS.onCommand = (_, command) => {
+          if (`!${command}`.toLowerCase() === TWITCH.command.toLowerCase())
+            triggerParty();
+        };
+        ComfyJS.Init(TWITCH.channel);
+      }
+    </script>
+  </body>
+</html>

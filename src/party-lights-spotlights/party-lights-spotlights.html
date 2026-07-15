@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Party Lights Spotlights</title>
+
+    <style>
+      /* Transparent background is required for OBS overlays */
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: transparent;
+        font-family: sans-serif;
+      }
+
+      /*  --- STYLE ELEMENTS ---  */
+
+      /* Primary container holding the overlay elements */
+      #party-container {
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        opacity: 0;
+      }
+
+      #party-container.active {
+        animation: party var(--duration) linear forwards;
+      }
+
+      /* Soft, top-mounted colored gradient beams */
+      .beam {
+        position: absolute;
+        top: -8vh;
+        left: calc(var(--x) * 1% - 30vmax);
+        width: 60vmax;
+        height: 125vh;
+        transform-origin: top center;
+        background: radial-gradient(
+          ellipse 62% 92% at 50% 0%,
+          var(--color) 0%,
+          transparent 75%
+        );
+        clip-path: polygon(44% 0, 56% 0, 100% 100%, 0 100%);
+        mix-blend-mode: screen;
+        filter: blur(26px) saturate(0.85);
+        opacity: 0.5;
+        animation: sweep var(--sweep-duration) ease-in-out infinite alternate;
+        animation-delay: var(--sweep-delay);
+      }
+
+      /* Flash effect */
+      .flash {
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(
+          circle at 50% 0%,
+          rgb(255 255 255 / 0.22),
+          transparent 55%
+        );
+        animation: flash 1.8s ease-in-out infinite alternate;
+      }
+
+      /*  --- ANIMATIONS KEYFRAMES --- */
+
+      @keyframes party {
+        0%,
+        100% {
+          opacity: 0;
+        }
+        5%,
+        95% {
+          opacity: 1;
+        }
+      }
+
+      @keyframes sweep {
+        from {
+          transform: rotate(var(--start-rotate));
+        }
+        to {
+          transform: rotate(var(--end-rotate));
+        }
+      }
+
+      @keyframes flash {
+        to {
+          opacity: 0.35;
+        }
+      }
+    </style>
+
+    <script src="https://unpkg.com/comfy.js@latest/dist/comfy.min.js"></script>
+  </head>
+  <body>
+    <div id="party-container"></div>
+
+    <script>
+      // ==========================================
+      // 1. CONFIGURATION
+      // ==========================================
+
+      const COLOR_OPTIONS = {
+        white: "#ffffff",
+        red: "#ff3b30",
+        pink: "#ff4081",
+        purple: "#a855f7",
+        blueDark: "#1d4ed8",
+        blueLight: "#00d4ff",
+        green: "#44e09c",
+        yellow: "#ffeb3b",
+        orange: "#ff9800",
+      };
+
+      const CONFIG = {
+        beams: 9,
+        duration: 7000,
+        delay: 90,
+        colors: [
+          "white",
+          "red",
+          "pink",
+          "purple",
+          "blueDark",
+          "blueLight",
+          "green",
+          "yellow",
+          "orange",
+        ],
+      };
+
+      const TWITCH = {
+        enabled: false,
+        channel: "your_twitch_channel",
+        command: "!party-spotlights",
+      };
+
+      // ==========================================
+      // 2. CONSTANTS
+      // ==========================================
+
+      const container = document.querySelector("#party-container");
+
+      // ==========================================
+      // 3. ANIMATION
+      // ==========================================
+
+      function triggerParty() {
+        container.replaceChildren();
+        container.style.setProperty("--duration", `${CONFIG.duration}ms`);
+
+        for (let i = 0; i < CONFIG.beams; i++) {
+          const beam = document.createElement("i");
+
+          beam.className = "beam";
+          const position =
+            CONFIG.beams === 1 ? 50 : 10 + (i * 80) / (CONFIG.beams - 1);
+          const direction = i % 2 === 0 ? -1 : 1;
+
+          beam.style.setProperty("--x", position);
+          beam.style.setProperty(
+            "--color",
+            COLOR_OPTIONS[CONFIG.colors[i % CONFIG.colors.length]] ??
+              CONFIG.colors[i % CONFIG.colors.length],
+          );
+          beam.style.setProperty(
+            "--start-rotate",
+            `${direction * (7 + (i % 3) * 3)}deg`,
+          );
+          beam.style.setProperty(
+            "--end-rotate",
+            `${direction * -(7 + (i % 3) * 3)}deg`,
+          );
+          beam.style.setProperty("--sweep-duration", `${3.8 + (i % 4) * 0.4}s`);
+          beam.style.setProperty("--sweep-delay", `${i * -0.15}s`);
+
+          container.append(beam);
+        }
+
+        const flash = document.createElement("i");
+
+        flash.className = "flash";
+        container.append(flash);
+        container.classList.remove("active");
+        void container.offsetWidth;
+        container.classList.add("active");
+
+        setTimeout(() => container.replaceChildren(), CONFIG.duration);
+      }
+
+      // ==========================================
+      // 3. CALLBACK (COMFYJS)
+      // ==========================================
+
+      if (location.search.includes("preview")) triggerParty();
+
+      if (TWITCH.enabled) {
+        ComfyJS.onCommand = (_, command) => {
+          if (`!${command}`.toLowerCase() === TWITCH.command.toLowerCase())
+            triggerParty();
+        };
+        ComfyJS.Init(TWITCH.channel);
+      }
+    </script>
+  </body>
+</html>
