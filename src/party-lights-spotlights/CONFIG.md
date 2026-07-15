@@ -18,5 +18,4 @@ const TWITCH = {
 | ---------- | ---------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
 | `beams`    | `9`                                                                    | Number of top-mounted moving spotlights.                                                                                     |
 | `duration` | `7000`                                                                 | Total effect duration in milliseconds.                                                                                       |
-| `delay`    | `90`                                                                   | Delay between beam creation in milliseconds.                                                                                 |
 | `colors`   | `white, red, pink, purple, blueDark, blueLight, green, yellow, orange` | Beam palette. Choose one or more of: `white`, `red`, `pink`, `purple`, `blueDark`, `blueLight`, `green`, `yellow`, `orange`. |
