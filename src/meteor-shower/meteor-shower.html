@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Meteor Shower</title>
+
+    <style>
+      /* Transparent background is required for OBS overlays */
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: transparent;
+        font-family: sans-serif;
+      }
+
+      /* Canvas styling for OBS overlays */
+      canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+      }
+    </style>
+
+    <script src="https://cdn.jsdelivr.net/npm/comfy.js@latest/dist/comfy.min.js"></script>
+  </head>
+  <body>
+    <canvas id="shower-canvas"></canvas>
+
+    <script>
+      // ==========================================
+      // 1. CONFIGURATION
+      // ==========================================
+
+      const COLOR_OPTIONS = {
+        white: "#ffffff",
+        red: "#ff3b30",
+        pink: "#ff4081",
+        purple: "#a855f7",
+        blueDark: "#1d4ed8",
+        blueLight: "#00d4ff",
+        green: "#44e09c",
+        yellow: "#ffeb3b",
+        orange: "#ff9800",
+      };
+
+      const CONFIG = {
+        count: 18,
+        launchDelay: 240,
+        speedMultiplier: 1,
+        trailLength: 220,
+        arcHeight: 260,
+        meteorSize: 1.5,
+        colors: [
+          "white",
+          "red",
+          "pink",
+          "purple",
+          "blueDark",
+          "blueLight",
+          "blueDark",
+          "green",
+          "yellow",
+          "orange",
+        ],
+      };
+
+      const TWITCH = {
+        enabled: false,
+        channel: "your_twitch_channel",
+        command: "!meteor-shower",
+      };
+
+      // ==========================================
+      // 2. CONSTANTS
+      // ==========================================
+
+      const canvas = document.querySelector("#shower-canvas");
+      const ctx = canvas.getContext("2d");
+      const meteors = [];
+      const random = (minimum, maximum) =>
+        Math.random() * (maximum - minimum) + minimum;
+      let width = 0;
+      let height = 0;
+      let lastFrameTime;
+
+      function resizeCanvas() {
+        const pixelRatio = window.devicePixelRatio || 1;
+        width = window.innerWidth;
+        height = window.innerHeight;
+        canvas.width = Math.round(width * pixelRatio);
+        canvas.height = Math.round(height * pixelRatio);
+        ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+      }
+
+      window.addEventListener("resize", resizeCanvas);
+      resizeCanvas();
+
+      // ==========================================
+      // 3. ANIMATION
+      // ==========================================
+
+      class Meteor {
+        constructor(color) {
+          this.startX = -CONFIG.trailLength;
+          this.endX = width + CONFIG.trailLength;
+          this.baselineY = random(height * 0.38, height * 0.82);
+          this.arcHeight = random(
+            CONFIG.arcHeight * 0.7,
+            CONFIG.arcHeight * 1.3,
+          );
+          this.pathLength = Math.hypot(
+            this.endX - this.startX,
+            this.arcHeight * 2,
+          );
+          this.speed = random(650, 930) * CONFIG.speedMultiplier;
+          this.progress = 0;
+          this.x = this.startX;
+          this.y = this.baselineY;
+          this.color = COLOR_OPTIONS[color] ?? color;
+          this.size = random(CONFIG.meteorSize * 0.7, CONFIG.meteorSize * 1.3);
+          this.trail = [];
+          this.shimmer = random(0, Math.PI * 2);
+        }
+
+        update(delta) {
+          this.trail.unshift({ x: this.x, y: this.y });
+          let trailDistance = 0;
+          for (let index = 1; index < this.trail.length; index++) {
+            const previous = this.trail[index - 1];
+            const current = this.trail[index];
+            trailDistance += Math.hypot(
+              previous.x - current.x,
+              previous.y - current.y,
+            );
+            if (trailDistance > CONFIG.trailLength) {
+              this.trail.length = index + 1;
+              break;
+            }
+          }
+
+          this.progress += (this.speed * delta) / this.pathLength;
+          this.x = this.startX + (this.endX - this.startX) * this.progress;
+          this.y =
+            this.baselineY - Math.sin(this.progress * Math.PI) * this.arcHeight;
+          this.shimmer += delta * 12;
+        }
+
+        draw() {
+          if (this.trail.length > 1) {
+            ctx.save();
+            ctx.lineCap = "round";
+            ctx.lineJoin = "round";
+            ctx.shadowBlur = this.size * 3;
+            ctx.shadowColor = this.color;
+
+            for (let i = this.trail.length - 1; i > 0; i--) {
+              const tail = this.trail[i];
+              const head = this.trail[i - 1];
+              const progress = 1 - i / this.trail.length;
+              ctx.beginPath();
+              ctx.moveTo(tail.x, tail.y);
+              ctx.lineTo(head.x, head.y);
+              ctx.strokeStyle = this.color;
+              ctx.globalAlpha = progress * progress * 0.82;
+              ctx.lineWidth = Math.max(0.5, this.size * progress * 1.4);
+              ctx.stroke();
+            }
+            ctx.restore();
+          }
+
+          const glowSize = this.size * (4 + Math.sin(this.shimmer) * 0.7);
+          const glow = ctx.createRadialGradient(
+            this.x,
+            this.y,
+            0,
+            this.x,
+            this.y,
+            glowSize,
+          );
+          glow.addColorStop(0, "#ffffff");
+          glow.addColorStop(0.16, this.color);
+          glow.addColorStop(1, "transparent");
+
+          ctx.save();
+          ctx.fillStyle = glow;
+          ctx.globalAlpha = 0.85;
+          ctx.beginPath();
+          ctx.arc(this.x, this.y, glowSize, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.globalAlpha = 1;
+          ctx.shadowBlur = this.size * 5;
+          ctx.shadowColor = this.color;
+          ctx.fillStyle = "#ffffff";
+          ctx.beginPath();
+          ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+
+        isOutside() {
+          return this.progress > 1;
+        }
+      }
+
+      function triggerMeteorShower() {
+        for (let index = 0; index < CONFIG.count; index++) {
+          window.setTimeout(() => {
+            const color =
+              CONFIG.colors[index % CONFIG.colors.length] ?? "white";
+            meteors.push(new Meteor(color));
+          }, index * CONFIG.launchDelay);
+        }
+      }
+
+      function animate(now) {
+        const delta = lastFrameTime
+          ? Math.min((now - lastFrameTime) / 1000, 0.05)
+          : 0;
+        lastFrameTime = now;
+        ctx.clearRect(0, 0, width, height);
+
+        for (let index = meteors.length - 1; index >= 0; index--) {
+          const meteor = meteors[index];
+          meteor.update(delta);
+          meteor.draw();
+          if (meteor.isOutside()) meteors.splice(index, 1);
+        }
+
+        requestAnimationFrame(animate);
+      }
+
+      requestAnimationFrame(animate);
+
+      // ==========================================
+      // 3. CALLBACK (COMFYJS)
+      // ==========================================
+
+      if (location.search.includes("preview")) triggerMeteorShower();
+
+      if (TWITCH.enabled) {
+        ComfyJS.onCommand = (_, command) => {
+          if (`!${command}`.toLowerCase() === TWITCH.command.toLowerCase())
+            triggerMeteorShower();
+        };
+        ComfyJS.Init(TWITCH.channel);
+      }
+    </script>
+  </body>
+</html>
