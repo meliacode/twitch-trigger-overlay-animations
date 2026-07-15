@@ -4,6 +4,8 @@ A collection of transparent, standalone HTML animations for [OBS Studio](https:/
 
 No build step is required for the animations themselves. Each source lives in its own folder, keeps its editable settings in a `CONFIG` object, and includes a matching configuration reference.
 
+[Open the live animation demo](https://meliacode.github.io/twitch-trigger-overlay-animations/).
+
 ## Animations
 
 | Animation               | Twitch command        | Source                                                                                                                 |
@@ -60,3 +62,7 @@ Keep animations standalone, transparent, and safe to trigger repeatedly. Before 
 ```bash
 npm run format
 ```
+
+## License
+
+Released under the [MIT License](LICENSE).
