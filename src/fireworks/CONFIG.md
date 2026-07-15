@@ -1,8 +1,21 @@
-# Fireworks configuration
+# Fireworks
 
-- `bursts`: number of explosions per trigger.
-- `particles`: particles created by each explosion.
-- `duration`: animation time in milliseconds.
-- `delay`: time between explosions in milliseconds.
-- `colors`: firework palette.
-- `TWITCH.command`: default chat command is `!fireworks`.
+Colorful particle explosions burst above the stream.
+
+## Twitch configuration
+
+```js
+const TWITCH = {
+  enabled: false,
+  channel: "your_twitch_channel",
+  command: "!fireworks",
+};
+```
+
+## Animation configuration
+
+| Setting             | Default value | Description                                       |
+| ------------------- | ------------- | ------------------------------------------------- |
+| `rocketCount`       | `25`          | Number of rockets launched per trigger.           |
+| `launchDelay`       | `150`         | Time between new rocket launches in milliseconds. |
+| `particlesPerBurst` | `180`         | Number of particles created by each explosion.    |
