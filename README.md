@@ -34,7 +34,7 @@ Use the channel name without `#`. Do not place your Twitch login or OAuth token 
 
 ## Testing an animation
 
-Open `demo/index.html` in a browser and select an animation. The **Play animation** button starts it locally; it does not send anything to Twitch.
+Open `dist/index.html` in a browser and select an animation. The **Play animation** button starts it locally; it does not send anything to Twitch.
 
 You can also append `?preview=1` to an animation URL to play it immediately once, which is convenient when configuring an OBS source.
 
@@ -52,7 +52,7 @@ Channel-point rewards do not arrive as normal chat commands. Configure your Twit
 src/
   <animation>/index.html    Standalone OBS browser source
   <animation>/CONFIG.md     Animation-specific settings
-demo/
+dist/
   index.html                Local animation picker
   demo.css                  Demo styling
 ```
