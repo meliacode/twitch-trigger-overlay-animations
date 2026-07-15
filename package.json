@@ -5,7 +5,8 @@
   "private": true,
   "scripts": {
     "start": "npx serve .",
-    "format": "prettier --write \"src/**/*.html\" \"dist/**/*.html\" \"dist/**/*.css\" \"*.md\""
+    "format": "prettier --write \"src/**/*.html\" \"dist/**/*.html\" \"dist/**/*.css\" \"*.md\"",
+    "format:check": "prettier --check \"src/**/*.html\" \"dist/**/*.html\" \"dist/**/*.css\" \"*.md\""
   },
   "type": "module",
   "devDependencies": {

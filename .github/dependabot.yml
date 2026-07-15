@@ -4,10 +4,22 @@ updates:
     directory: "/"
     schedule:
       interval: monthly
-    open-pull-requests-limit: 5
+    # Disable routine version-update PRs. Security-update PRs are unaffected.
+    open-pull-requests-limit: 0
+    groups:
+      npm-security-updates:
+        applies-to: security-updates
+        patterns:
+          - "*"
 
   - package-ecosystem: github-actions
     directory: "/"
     schedule:
       interval: monthly
-    open-pull-requests-limit: 5
+    # Disable routine version-update PRs. Security-update PRs are unaffected.
+    open-pull-requests-limit: 0
+    groups:
+      actions-security-updates:
+        applies-to: security-updates
+        patterns:
+          - "*"
