@@ -3,7 +3,11 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "start": "npx serve ."
+    "start": "npx serve .",
+    "format": "prettier --write \"src/**/*.html\" \"dist/**/*.html\" \"dist/**/*.css\" \"*.md\""
   },
-  "type": "module"
+  "type": "module",
+  "devDependencies": {
+    "prettier": "^3.9.5"
+  }
 }
