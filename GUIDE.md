@@ -40,10 +40,12 @@ const TWITCH = {
   enabled: false,
   channel: "your_twitch_channel",
   command: "!confetti-explosion",
+  globalCooldown: 500,
+  userCooldown: 5000,
 };
 ```
 
-Set `enabled` to `true`, replace `channel` with the channel name without `@`, and keep or change `command`.
+Set `enabled` to `true`, replace `channel` with the channel name without `@`, and keep or change `command`. Cooldowns are in milliseconds: `globalCooldown` spaces animations apart, and `userCooldown` prevents one person from repeatedly using the same command.
 Restart or refresh the OBS Browser source after saving.
 
 ```js
@@ -51,6 +53,8 @@ const TWITCH = {
   enabled: true,
   channel: "meliacode",
   command: "!celebrate",
+  globalCooldown: 500,
+  userCooldown: 5000,
 };
 ```
 

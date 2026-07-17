@@ -77,6 +77,8 @@ const TWITCH = {
   enabled: false,
   channel: "your_twitch_channel",
   command: "!star-shower",
+  globalCooldown: 500,
+  userCooldown: 5000,
 };
 ```
 
@@ -86,6 +88,7 @@ const TWITCH = {
 
 - Start with `enabled: false` and `channel: "your_twitch_channel"`.
 - Give the source a unique `!` command. Prefer one derived from the folder name, unless a short project command is clearer.
+- Keep `globalCooldown` and `userCooldown` in milliseconds. The global cooldown spaces animations apart, while the user cooldown prevents one person from spamming the same command.
 - Never commit a channel login, OAuth token, password, or other secret.
 - Include one-time local preview support with `?preview=1`.
 
@@ -95,9 +98,19 @@ Use this callback pattern, replacing `play` with the animation's trigger functio
 if (location.search.includes("preview")) triggerShower();
 
 if (TWITCH.enabled) {
-  ComfyJS.onCommand = (_, command) => {
-    if (`!${command}`.toLowerCase() === TWITCH.command.toLowerCase())
-      triggerShower();
+  ComfyJS.onCommand = (_, command, _message, _flags, extra) => {
+    if (`!${command}`.toLowerCase() !== TWITCH.command.toLowerCase()) return;
+    if (
+      extra.sinceLastCommand.any > 0 &&
+      extra.sinceLastCommand.any < TWITCH.globalCooldown
+    )
+      return;
+    if (
+      extra.sinceLastCommand.user > 0 &&
+      extra.sinceLastCommand.user < TWITCH.userCooldown
+    )
+      return;
+    triggerShower();
   };
   ComfyJS.Init(TWITCH.channel);
 }
@@ -119,8 +132,12 @@ const TWITCH = {
   enabled: false,
   channel: "your_twitch_channel",
   command: "!star-shower",
+  globalCooldown: 500,
+  userCooldown: 5000,
 };
 ```
+
+`globalCooldown` waits 0.5 seconds between animations. `userCooldown` prevents the same person from using this command more than once every 5 seconds. Both values are in milliseconds.
 
 ## Animation configuration
 

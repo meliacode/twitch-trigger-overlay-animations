@@ -136,6 +136,8 @@
         enabled: false,
         channel: "your_twitch_channel",
         command: "!party-spotlights",
+        globalCooldown: 500,
+        userCooldown: 5000,
       };
 
       // ==========================================
@@ -198,9 +200,20 @@
       if (location.search.includes("preview")) triggerParty();
 
       if (TWITCH.enabled) {
-        ComfyJS.onCommand = (_, command) => {
-          if (`!${command}`.toLowerCase() === TWITCH.command.toLowerCase())
-            triggerParty();
+        ComfyJS.onCommand = (_, command, _message, _flags, extra) => {
+          if (`!${command}`.toLowerCase() !== TWITCH.command.toLowerCase())
+            return;
+          if (
+            extra.sinceLastCommand.any > 0 &&
+            extra.sinceLastCommand.any < TWITCH.globalCooldown
+          )
+            return;
+          if (
+            extra.sinceLastCommand.user > 0 &&
+            extra.sinceLastCommand.user < TWITCH.userCooldown
+          )
+            return;
+          triggerParty();
         };
         ComfyJS.Init(TWITCH.channel);
       }

@@ -9,8 +9,12 @@ const TWITCH = {
   enabled: false,
   channel: "your_twitch_channel",
   command: "!spreadlove",
+  globalCooldown: 500,
+  userCooldown: 5000,
 };
 ```
+
+`globalCooldown` waits 0.5 seconds between animations. `userCooldown` prevents the same person from using this command more than once every 5 seconds. Both values are in milliseconds.
 
 ## Animation configuration
 
