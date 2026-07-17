@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Torrential Rain</title>
+
+    <style>
+      /* Transparent background is required for OBS overlays */
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: transparent;
+        font-family: sans-serif;
+      }
+
+      /* Canvas styling for OBS overlays */
+      canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+      }
+    </style>
+
+    <script src="https://cdn.jsdelivr.net/npm/comfy.js@latest/dist/comfy.min.js"></script>
+  </head>
+  <body>
+    <canvas id="rain-canvas"></canvas>
+
+    <script>
+      // ==========================================
+      // 1. CONFIGURATION
+      // ==========================================
+
+      const CONFIG = {
+        rainCount: 280,
+        duration: 7500,
+        showFog: true,
+        showStorm: true,
+      };
+
+      const TWITCH = {
+        enabled: false,
+        channel: "your_twitch_channel",
+        command: "!torrential-rain",
+        globalCooldown: 500,
+        userCooldown: 5000,
+      };
+
+      // ==========================================
+      // 2. CONSTANTS
+      // ==========================================
+
+      const canvas = document.querySelector("#rain-canvas");
+      const context = canvas.getContext("2d");
+
+      const storms = [];
+
+      const random = (minimum, maximum) =>
+        Math.random() * (maximum - minimum) + minimum;
+
+      let width = 0;
+      let height = 0;
+      let lastFrame = 0;
+      let lightning = 0;
+      let nextLightningAt = 0;
+
+      function resizeCanvas() {
+        const pixelRatio = window.devicePixelRatio || 1;
+        width = window.innerWidth;
+        height = window.innerHeight;
+        canvas.width = Math.round(width * pixelRatio);
+        canvas.height = Math.round(height * pixelRatio);
+        context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+      }
+      window.addEventListener("resize", resizeCanvas);
+      resizeCanvas();
+
+      // ==========================================
+      // 3. ANIMATION
+      // ==========================================
+
+      class Raindrop {
+        constructor() {
+          this.reset(true);
+        }
+
+        reset(startAboveViewport = false) {
+          this.x = random(-width * 0.15, width);
+          this.y = startAboveViewport ? random(-height, height) : -40;
+          this.length = random(22, 58);
+          this.speed = random(820, 1350);
+          this.slant = random(90, 180);
+          this.opacity = random(0.28, 0.72);
+          this.width = random(0.7, 1.55);
+        }
+
+        update(delta) {
+          this.x += this.slant * delta;
+          this.y += this.speed * delta;
+          if (this.y - this.length > height || this.x > width + 60)
+            this.reset();
+        }
+
+        draw() {
+          context.beginPath();
+          context.moveTo(this.x, this.y);
+          context.lineTo(this.x - this.slant * 0.035, this.y - this.length);
+          context.strokeStyle = `rgba(190, 222, 255, ${this.opacity})`;
+          context.lineWidth = this.width;
+          context.stroke();
+        }
+      }
+
+      function createStorm(now) {
+        storms.push({
+          endsAt: now + CONFIG.duration,
+          drops: Array.from({ length: CONFIG.rainCount }, () => new Raindrop()),
+        });
+      }
+
+      function drawFog(now) {
+        if (!CONFIG.showFog || storms.length === 0) return;
+        const wave = Math.sin(now * 0.00035) * 0.07;
+        const fog = context.createLinearGradient(0, height * 0.42, 0, height);
+        fog.addColorStop(0, "rgba(162, 183, 204, 0)");
+        fog.addColorStop(0.52, `rgba(176, 194, 210, ${0.16 + wave})`);
+        fog.addColorStop(1, "rgba(125, 145, 166, 0.24)");
+        context.fillStyle = fog;
+        context.fillRect(0, 0, width, height);
+
+        const bank = context.createRadialGradient(
+          width * (0.25 + Math.sin(now * 0.00012) * 0.1),
+          height * 0.9,
+          20,
+          width * 0.5,
+          height * 0.92,
+          width * 0.8,
+        );
+        bank.addColorStop(0, "rgba(205, 218, 229, 0.17)");
+        bank.addColorStop(1, "rgba(205, 218, 229, 0)");
+        context.fillStyle = bank;
+        context.fillRect(0, 0, width, height);
+      }
+
+      function drawLightning(now) {
+        if (!CONFIG.showStorm || storms.length === 0) return;
+        if (now >= nextLightningAt) {
+          lightning = 1.35;
+          nextLightningAt = now + random(1050, 3300);
+        }
+        lightning *= 0.89;
+        if (lightning < 0.01) return;
+
+        context.fillStyle = `rgba(210, 226, 255, ${lightning * 0.48})`;
+        context.fillRect(0, 0, width, height);
+        context.save();
+        context.globalAlpha = lightning;
+        context.strokeStyle = "#e8f4ff";
+        context.lineWidth = 3;
+        context.shadowColor = "#a9d8ff";
+        context.shadowBlur = 26;
+        context.beginPath();
+        let x = random(width * 0.2, width * 0.8);
+        context.moveTo(x, -10);
+        for (let y = 0; y < height * 0.55; y += 42) {
+          x += random(-32, 32);
+          context.lineTo(x, y + 42);
+        }
+        context.stroke();
+        context.restore();
+      }
+
+      function render(now) {
+        const delta = lastFrame ? Math.min((now - lastFrame) / 1000, 0.05) : 0;
+        lastFrame = now;
+        context.clearRect(0, 0, width, height);
+
+        for (let index = storms.length - 1; index >= 0; index--) {
+          const storm = storms[index];
+          if (now >= storm.endsAt) {
+            storms.splice(index, 1);
+            continue;
+          }
+          for (const drop of storm.drops) {
+            drop.update(delta);
+            drop.draw();
+          }
+        }
+
+        drawFog(now);
+        drawLightning(now);
+        requestAnimationFrame(render);
+      }
+
+      requestAnimationFrame(render);
+
+      function triggerTorrentialRain() {
+        createStorm(performance.now());
+      }
+
+      // ==========================================
+      // 3. CALLBACK (COMFYJS)
+      // ==========================================
+
+      if (location.search.includes("preview")) triggerTorrentialRain();
+
+      if (TWITCH.enabled) {
+        ComfyJS.onCommand = (_, command, _message, _flags, extra) => {
+          if (`!${command}`.toLowerCase() !== TWITCH.command.toLowerCase())
+            return;
+          if (
+            extra.sinceLastCommand.any > 0 &&
+            extra.sinceLastCommand.any < TWITCH.globalCooldown
+          )
+            return;
+          if (
+            extra.sinceLastCommand.user > 0 &&
+            extra.sinceLastCommand.user < TWITCH.userCooldown
+          )
+            return;
+          triggerTorrentialRain();
+        };
+        ComfyJS.Init(TWITCH.channel);
+      }
+    </script>
+  </body>
+</html>
