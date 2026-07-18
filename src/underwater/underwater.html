@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Underwater</title>
+
+    <style>
+      /* Transparent background is required for OBS overlays */
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: transparent;
+        font-family: sans-serif;
+      }
+
+      /* Canvas styling for OBS overlays */
+      canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+      }
+    </style>
+
+    <script src="https://cdn.jsdelivr.net/npm/comfy.js@latest/dist/comfy.min.js"></script>
+  </head>
+  <body>
+    <canvas id="underwater-canvas"></canvas>
+
+    <script>
+      // ==========================================
+      // 1. CONFIGURATION
+      // ==========================================
+
+      const CONFIG = {
+        effectDuration: 8000,
+
+        waterLevel: 20,
+        waterColorTop: "rgba(44, 164, 215, 0.2)",
+        waterColorBottom: "rgba(22, 94, 184, 1)",
+        surfaceWaveAmplitude: 5,
+        surfaceWaveSpeed: 0.002,
+
+        bubbleCount: 50,
+        bubbleColor: "#ffffff",
+        bubbleMinRadius: 2,
+        bubbleMaxRadius: 9,
+        bubbleMinSpeed: 18,
+        bubbleMaxSpeed: 62,
+        bubbleSway: 0.8,
+      };
+
+      const TWITCH = {
+        enabled: false,
+        channel: "your_twitch_channel",
+        command: "!underwater",
+        globalCooldown: 500,
+        userCooldown: 5000,
+      };
+
+      // ==========================================
+      // 2. CONSTANTS
+      // ==========================================
+
+      const canvas = document.querySelector("#underwater-canvas");
+      const context = canvas.getContext("2d");
+
+      const effects = [];
+
+      let width = 0;
+      let height = 0;
+      let lastFrame = 0;
+
+      const random = (minimum, maximum) =>
+        Math.random() * (maximum - minimum) + minimum;
+
+      function resizeCanvas() {
+        const pixelRatio = window.devicePixelRatio || 1;
+
+        width = window.innerWidth;
+        height = window.innerHeight;
+        canvas.width = Math.round(width * pixelRatio);
+        canvas.height = Math.round(height * pixelRatio);
+        context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+      }
+
+      window.addEventListener("resize", resizeCanvas);
+      resizeCanvas();
+
+      // ==========================================
+      // 3. ANIMATION
+      // ==========================================
+
+      function waterline() {
+        return height * Math.min(100, Math.max(0, CONFIG.waterLevel)) * 0.01;
+      }
+
+      function traceWaterline(level, now) {
+        context.beginPath();
+
+        for (let x = -20; x <= width + 20; x += 12) {
+          const y =
+            level +
+            Math.sin(x * 0.024 + now * CONFIG.surfaceWaveSpeed) *
+              CONFIG.surfaceWaveAmplitude;
+
+          if (x === -20) {
+            context.moveTo(x, y);
+          } else {
+            context.lineTo(x, y);
+          }
+        }
+      }
+
+      function traceWaterShape(level, now) {
+        traceWaterline(level, now);
+        context.lineTo(width + 20, height);
+        context.lineTo(-20, height);
+        context.closePath();
+      }
+
+      function createBubble(level) {
+        const minRadius = Math.max(0, CONFIG.bubbleMinRadius);
+        const maxRadius = Math.max(minRadius, CONFIG.bubbleMaxRadius);
+        const minSpeed = Math.max(0, CONFIG.bubbleMinSpeed);
+        const maxSpeed = Math.max(minSpeed, CONFIG.bubbleMaxSpeed);
+
+        return {
+          x: random(0, width),
+          y: random(level, height + 30),
+          radius: random(minRadius, maxRadius),
+          speed: random(minSpeed, maxSpeed),
+          drift: random(0, Math.max(0, CONFIG.bubbleSway)),
+          phase: random(0, Math.PI * 2),
+        };
+      }
+
+      function drawWater(effect, now) {
+        const level = effect.targetWaterline;
+        const waterGradient = context.createLinearGradient(0, level, 0, height);
+
+        waterGradient.addColorStop(0, CONFIG.waterColorTop);
+        waterGradient.addColorStop(1, CONFIG.waterColorBottom);
+        context.fillStyle = waterGradient;
+        context.globalAlpha = 1;
+        traceWaterShape(level, now);
+        context.fill();
+        context.globalAlpha = 1;
+      }
+
+      function updateAndDrawBubbles(effect, delta, now) {
+        const level = effect.targetWaterline + CONFIG.bubbleMaxRadius * 2;
+
+        context.save();
+
+        for (const bubble of effect.bubbles) {
+          bubble.y -= bubble.speed * delta;
+          bubble.x += Math.sin(now * 0.0015 + bubble.phase) * bubble.drift;
+
+          if (bubble.y + bubble.radius < level)
+            Object.assign(bubble, createBubble(level));
+
+          context.beginPath();
+          context.arc(bubble.x, bubble.y, bubble.radius, 0, Math.PI * 2);
+          context.globalAlpha = 0.5;
+          context.strokeStyle = CONFIG.bubbleColor;
+          context.lineWidth = 1.2;
+          context.stroke();
+          context.beginPath();
+          context.arc(
+            bubble.x - bubble.radius * 0.3,
+            bubble.y - bubble.radius * 0.35,
+            Math.max(0.7, bubble.radius * 0.17),
+            0,
+            Math.PI * 2,
+          );
+          context.fillStyle = CONFIG.bubbleColor;
+          context.fill();
+        }
+
+        context.restore();
+      }
+
+      function triggerUnderwater() {
+        const now = performance.now();
+        const level = waterline();
+
+        effects.push({
+          startsAt: now,
+          targetWaterline: level,
+          endsAt: now + Math.max(0, CONFIG.effectDuration),
+          bubbles: Array.from({ length: CONFIG.bubbleCount }, () =>
+            createBubble(level),
+          ),
+        });
+      }
+
+      function render(now) {
+        const delta = lastFrame ? Math.min((now - lastFrame) / 1000, 0.05) : 0;
+        lastFrame = now;
+        context.clearRect(0, 0, width, height);
+
+        for (let index = effects.length - 1; index >= 0; index--) {
+          const effect = effects[index];
+
+          if (now >= effect.endsAt) {
+            effects.splice(index, 1);
+            continue;
+          }
+
+          drawWater(effect, now);
+          updateAndDrawBubbles(effect, delta, now);
+        }
+
+        requestAnimationFrame(render);
+      }
+
+      requestAnimationFrame(render);
+
+      // ==========================================
+      // 3. CALLBACK (COMFYJS)
+      // ==========================================
+
+      if (location.search.includes("preview")) triggerUnderwater();
+
+      if (TWITCH.enabled) {
+        ComfyJS.onCommand = (_, command, _message, _flags, extra) => {
+          if (`!${command}`.toLowerCase() !== TWITCH.command.toLowerCase())
+            return;
+          if (
+            extra.sinceLastCommand.any > 0 &&
+            extra.sinceLastCommand.any < TWITCH.globalCooldown
+          )
+            return;
+          if (
+            extra.sinceLastCommand.user > 0 &&
+            extra.sinceLastCommand.user < TWITCH.userCooldown
+          )
+            return;
+          triggerUnderwater();
+        };
+        ComfyJS.Init(TWITCH.channel);
+      }
+    </script>
+  </body>
+</html>
