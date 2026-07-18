@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sakura Petal Storm</title>
+
+    <style>
+      /* Transparent background is required for OBS overlays */
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: transparent;
+        font-family: sans-serif;
+      }
+
+      /* Canvas styling for OBS overlays */
+      canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+      }
+    </style>
+
+    <script src="https://cdn.jsdelivr.net/npm/comfy.js@latest/dist/comfy.min.js"></script>
+  </head>
+  <body>
+    <canvas id="sakura-canvas"></canvas>
+
+    <script>
+      // ==========================================
+      // 1. CONFIGURATION
+      // ==========================================
+
+      const CONFIG = {
+        petalCount: 120,
+        duration: 7200,
+        windSpeed: 460,
+        fallSpeed: 155,
+        gustStrength: 150,
+        petalSize: [12, 25],
+        colors: ["#ffd6e5", "#ffb8d2", "#fff0f6", "#f59aba"],
+      };
+
+      const TWITCH = {
+        enabled: false,
+        channel: "your_twitch_channel",
+        command: "!sakura-storm",
+        globalCooldown: 500,
+        userCooldown: 5000,
+      };
+
+      // ==========================================
+      // 2. CONSTANTS
+      // ==========================================
+
+      const canvas = document.querySelector("#sakura-canvas");
+      const context = canvas.getContext("2d");
+
+      const storms = [];
+      const FADE_DURATION = 1050;
+
+      let width = 0;
+      let height = 0;
+      let lastFrame = 0;
+
+      const random = (minimum, maximum) =>
+        Math.random() * (maximum - minimum) + minimum;
+
+      function resizeCanvas() {
+        const pixelRatio = window.devicePixelRatio || 1;
+        width = window.innerWidth;
+        height = window.innerHeight;
+        canvas.width = Math.round(width * pixelRatio);
+        canvas.height = Math.round(height * pixelRatio);
+        context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+      }
+
+      // ==========================================
+      // 3. ANIMATION
+      // ==========================================
+
+      class Petal {
+        constructor(index) {
+          const [smallestPetal, largestPetal] = CONFIG.petalSize;
+          this.x = random(-width * 0.4, width * 0.72);
+          this.y = random(-height * 0.65, height * 0.7);
+          this.size = random(smallestPetal, largestPetal);
+          this.color = CONFIG.colors[index % CONFIG.colors.length];
+          this.speed = random(0.68, 1.28);
+          this.drift = random(0.65, 1.35);
+          this.rotation = random(0, Math.PI * 2);
+          this.spin = random(-5.5, 5.5);
+          this.wobble = random(0, Math.PI * 2);
+          this.wobbleSpeed = random(1.1, 2.8);
+          this.opacity = random(0.62, 1);
+          this.depth = random(0.65, 1.15);
+        }
+
+        update(delta, elapsed) {
+          const gust =
+            Math.sin(elapsed * 0.0022 + this.wobble) * CONFIG.gustStrength;
+          this.x += (CONFIG.windSpeed * this.speed + gust * this.drift) * delta;
+          this.y +=
+            (CONFIG.fallSpeed * this.speed + Math.abs(gust) * 0.18) * delta;
+          this.rotation += this.spin * delta;
+          this.wobble += this.wobbleSpeed * delta;
+        }
+
+        isOutside() {
+          const edge = this.size * 2;
+          return (
+            this.x > width + edge ||
+            this.y > height + edge ||
+            this.x < -width * 0.5 - edge
+          );
+        }
+
+        draw(alpha) {
+          context.save();
+          context.translate(
+            this.x + Math.sin(this.wobble) * this.size * 0.28,
+            this.y,
+          );
+          context.rotate(this.rotation);
+          context.scale(this.depth, 1 / this.depth);
+          context.globalAlpha = this.opacity * alpha;
+          context.fillStyle = this.color;
+          context.shadowColor = "rgba(255, 174, 207, 0.34)";
+          context.shadowBlur = this.size * 0.65;
+          context.beginPath();
+          context.moveTo(0, -this.size * 0.58);
+          context.bezierCurveTo(
+            this.size * 0.8,
+            -this.size * 0.5,
+            this.size * 0.7,
+            this.size * 0.6,
+            0,
+            this.size * 0.75,
+          );
+          context.bezierCurveTo(
+            -this.size * 0.7,
+            this.size * 0.6,
+            -this.size * 0.8,
+            -this.size * 0.5,
+            0,
+            -this.size * 0.58,
+          );
+          context.fill();
+          context.fillStyle = "rgba(255, 255, 255, 0.38)";
+          context.beginPath();
+          context.ellipse(
+            -this.size * 0.13,
+            -this.size * 0.18,
+            this.size * 0.12,
+            this.size * 0.38,
+            -0.35,
+            0,
+            Math.PI * 2,
+          );
+          context.fill();
+          context.restore();
+        }
+      }
+
+      function createStorm(now) {
+        const petals = Array.from(
+          { length: CONFIG.petalCount },
+          (_, index) => new Petal(index),
+        );
+        storms.push({
+          petals,
+          startedAt: now,
+          fadeStartsAt: now + CONFIG.duration - FADE_DURATION,
+          endsAt: now + CONFIG.duration,
+        });
+      }
+
+      function render(now) {
+        const delta = lastFrame ? Math.min((now - lastFrame) / 1000, 0.05) : 0;
+        lastFrame = now;
+        context.clearRect(0, 0, width, height);
+
+        for (let index = storms.length - 1; index >= 0; index--) {
+          const storm = storms[index];
+          if (now >= storm.endsAt) {
+            storms.splice(index, 1);
+            continue;
+          }
+          const alpha =
+            now < storm.fadeStartsAt
+              ? 1
+              : Math.max(0, (storm.endsAt - now) / FADE_DURATION);
+          const elapsed = now - storm.startedAt;
+          storm.petals = storm.petals.filter((petal) => {
+            petal.update(delta, elapsed);
+            if (petal.isOutside()) return false;
+            petal.draw(alpha);
+            return true;
+          });
+          if (storm.petals.length === 0) storms.splice(index, 1);
+        }
+        requestAnimationFrame(render);
+      }
+
+      function triggerSakuraPetalStorm() {
+        createStorm(performance.now());
+      }
+
+      window.addEventListener("resize", resizeCanvas);
+      resizeCanvas();
+      requestAnimationFrame(render);
+
+      // ==========================================
+      // 3. CALLBACK (COMFYJS)
+      // ==========================================
+
+      if (location.search.includes("preview")) triggerSakuraPetalStorm();
+
+      if (TWITCH.enabled) {
+        ComfyJS.onCommand = (_, command, _message, _flags, extra) => {
+          if (`!${command}`.toLowerCase() !== TWITCH.command.toLowerCase())
+            return;
+          if (
+            extra.sinceLastCommand.any > 0 &&
+            extra.sinceLastCommand.any < TWITCH.globalCooldown
+          )
+            return;
+          if (
+            extra.sinceLastCommand.user > 0 &&
+            extra.sinceLastCommand.user < TWITCH.userCooldown
+          )
+            return;
+          triggerSakuraPetalStorm();
+        };
+        ComfyJS.Init(TWITCH.channel);
+      }
+    </script>
+  </body>
+</html>
