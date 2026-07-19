@@ -79,6 +79,7 @@
       const random = (minimum, maximum) =>
         Math.random() * (maximum - minimum) + minimum;
 
+      // Resize the canvas backing store for crisp rendering.
       function resizeCanvas() {
         const pixelRatio = window.devicePixelRatio || 1;
 
@@ -96,10 +97,12 @@
       // 3. ANIMATION
       // ==========================================
 
+      // Convert the configured water percentage into a viewport coordinate.
       function waterline() {
         return height * Math.min(100, Math.max(0, CONFIG.waterLevel)) * 0.01;
       }
 
+      // Draw the animated curve defining the water surface.
       function traceWaterline(level, now) {
         context.beginPath();
 
@@ -117,6 +120,7 @@
         }
       }
 
+      // Extend the waterline into a closed shape covering the sea.
       function traceWaterShape(level, now) {
         traceWaterline(level, now);
         context.lineTo(width + 20, height);
@@ -124,6 +128,7 @@
         context.closePath();
       }
 
+      // Create one bubble with randomized visual properties.
       function createBubble(level) {
         const minRadius = Math.max(0, CONFIG.bubbleMinRadius);
         const maxRadius = Math.max(minRadius, CONFIG.bubbleMaxRadius);
@@ -140,6 +145,7 @@
         };
       }
 
+      // Paint the water gradient within the moving surface shape.
       function drawWater(effect, now) {
         const level = effect.targetWaterline;
         const waterGradient = context.createLinearGradient(0, level, 0, height);
@@ -153,6 +159,7 @@
         context.globalAlpha = 1;
       }
 
+      // Move, recycle, and render bubbles for one active effect.
       function updateAndDrawBubbles(effect, delta, now) {
         const level = effect.targetWaterline + CONFIG.bubbleMaxRadius * 2;
 
@@ -186,6 +193,7 @@
         context.restore();
       }
 
+      // Add a new independently managed underwater effect.
       function triggerUnderwater() {
         const now = performance.now();
         const level = waterline();
@@ -200,6 +208,7 @@
         });
       }
 
+      // Redraw active effects and discard those that have finished.
       function render(now) {
         const delta = lastFrame ? Math.min((now - lastFrame) / 1000, 0.05) : 0;
         lastFrame = now;
