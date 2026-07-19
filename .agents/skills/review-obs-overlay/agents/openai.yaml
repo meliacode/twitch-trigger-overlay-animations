@@ -1,0 +1,4 @@
+interface:
+  display_name: "Review OBS Overlay"
+  short_description: "Audit a standalone OBS overlay and its documentation."
+  default_prompt: "Review this OBS overlay for repository and runtime issues."
