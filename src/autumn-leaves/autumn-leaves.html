@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Autumn Leaves</title>
+
+    <style>
+      /* Transparent background is required for OBS overlays */
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: transparent;
+        font-family: sans-serif;
+      }
+
+      /* Stage styling for OBS overlays */
+      #leaf-stage {
+        position: fixed;
+        overflow: hidden;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+      }
+
+      /* Individual leaf styling */
+      .leaf {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: var(--size);
+        height: calc(var(--size) * 0.72);
+        border-radius: 92% 8% 92% 8%;
+        background: var(--color);
+        box-shadow:
+          inset calc(var(--size) * -0.09) calc(var(--size) * -0.07) 0
+            rgba(72, 30, 8, 0.2),
+          0 2px 3px rgba(60, 28, 8, 0.18);
+        opacity: 0;
+        transform-origin: 50% 50%;
+        will-change: transform, opacity;
+      }
+
+      .leaf::before {
+        position: absolute;
+        top: 48%;
+        left: -12%;
+        width: 124%;
+        height: 1px;
+        content: "";
+        background: rgba(75, 34, 10, 0.42);
+        transform: rotate(-32deg);
+      }
+    </style>
+
+    <script src="https://cdn.jsdelivr.net/npm/comfy.js@latest/dist/comfy.min.js"></script>
+  </head>
+  <body>
+    <div id="leaf-stage" aria-hidden="true"></div>
+
+    <script>
+      // ==========================================
+      // 1. CONFIGURATION
+      // ==========================================
+
+      const CONFIG = {
+        count: 180,
+        duration: 8000,
+        colors: ["#b84020", "#d76522", "#e59a2d", "#9e3524", "#c77a1d"],
+      };
+
+      const ADVANCED_CONFIG = {
+        spread: 1000,
+        windAngle: 78,
+        windDrift: 130,
+        sway: 35,
+        minSize: 18,
+        maxSize: 48,
+      };
+
+      const TWITCH = {
+        enabled: false,
+        channel: "your_twitch_channel",
+        command: "!autumn-leaves",
+        globalCooldown: 500,
+        userCooldown: 5000,
+      };
+
+      // ==========================================
+      // 2. CONSTANTS
+      // ==========================================
+
+      const stage = document.querySelector("#leaf-stage");
+
+      // ==========================================
+      // 3. ANIMATION
+      // ==========================================
+
+      // Returns a random number within the requested range.
+      function randomBetween(min, max) {
+        return min + Math.random() * (max - min);
+      }
+
+      // Creates a leaf element and appends it to the stage.
+      function createLeaf() {
+        const leaf = document.createElement("div");
+
+        const size = randomBetween(
+          ADVANCED_CONFIG.minSize,
+          ADVANCED_CONFIG.maxSize,
+        );
+        const color =
+          CONFIG.colors[Math.floor(Math.random() * CONFIG.colors.length)];
+
+        leaf.className = "leaf";
+        leaf.style.setProperty("--size", `${size}px`);
+        leaf.style.setProperty("--color", color);
+
+        stage.appendChild(leaf);
+
+        return leaf;
+      }
+
+      // Creates and starts one wind-driven leaf animation.
+      function releaseLeaf() {
+        const leaf = createLeaf();
+
+        const size = randomBetween(
+          ADVANCED_CONFIG.minSize,
+          ADVANCED_CONFIG.maxSize,
+        );
+        const startX = randomBetween(
+          -window.innerWidth * 0.18,
+          window.innerWidth * 0.76,
+        );
+        const startY = randomBetween(-window.innerHeight * 0.32, -24);
+        const duration = CONFIG.duration * randomBetween(0.78, 1.2);
+        const delay = Math.random() * ADVANCED_CONFIG.spread;
+        const spin = randomBetween(1.6, 4.1) * (Math.random() < 0.5 ? -1 : 1);
+        const initialRotation = randomBetween(0, 360);
+        const diagonalDrift =
+          ADVANCED_CONFIG.windDrift * randomBetween(0.72, 1.22);
+        const sway = ADVANCED_CONFIG.sway * randomBetween(0.55, 1.35);
+        const flutterSpeed = randomBetween(2.4, 3.6);
+
+        let animationFrame;
+        const startedAt = performance.now() + delay;
+
+        // Updates the leaf position and removes it after its flight.
+        function animate(now) {
+          const progress = (now - startedAt) / duration;
+
+          if (progress < 0) {
+            animationFrame = requestAnimationFrame(animate);
+            return;
+          }
+
+          if (progress >= 1) {
+            leaf.remove();
+            return;
+          }
+
+          const pathAngle = (ADVANCED_CONFIG.windAngle * Math.PI) / 180;
+          const distance =
+            Math.hypot(window.innerWidth, window.innerHeight) * 1.25;
+          const x =
+            startX +
+            Math.cos(pathAngle) * distance * progress +
+            diagonalDrift * progress +
+            Math.sin(progress * Math.PI * flutterSpeed) * sway;
+          const y =
+            startY +
+            Math.sin(pathAngle) * distance * progress +
+            window.innerHeight * 2.1 * progress;
+          const rotation = initialRotation + spin * 360 * progress;
+          const opacity = Math.min(progress * 7, (1 - progress) * 7, 1);
+
+          leaf.style.opacity = opacity;
+          leaf.style.transform = `translate3d(${x}px, ${y}px, 0) rotate(${rotation}deg)`;
+
+          animationFrame = requestAnimationFrame(animate);
+        }
+
+        animationFrame = requestAnimationFrame(animate);
+
+        return () => cancelAnimationFrame(animationFrame);
+      }
+
+      // Starts a new effect instance.
+      function triggerAutumnLeaves() {
+        for (let index = 0; index < CONFIG.count; index += 1) releaseLeaf();
+      }
+
+      // ==========================================
+      // 3. CALLBACK (COMFYJS)
+      // ==========================================
+
+      if (location.search.includes("preview")) triggerAutumnLeaves();
+
+      if (TWITCH.enabled) {
+        ComfyJS.onCommand = (_, command, _message, _flags, extra) => {
+          if (`!${command}`.toLowerCase() !== TWITCH.command.toLowerCase())
+            return;
+          if (
+            extra.sinceLastCommand.any > 0 &&
+            extra.sinceLastCommand.any < TWITCH.globalCooldown
+          )
+            return;
+          if (
+            extra.sinceLastCommand.user > 0 &&
+            extra.sinceLastCommand.user < TWITCH.userCooldown
+          )
+            return;
+          triggerAutumnLeaves();
+        };
+        ComfyJS.Init(TWITCH.channel);
+      }
+    </script>
+  </body>
+</html>

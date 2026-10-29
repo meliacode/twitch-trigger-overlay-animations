@@ -10,6 +10,7 @@ No build step is required for the animations themselves. Each source lives in it
 
 | Animation               | Twitch command        | Source                                                                                                                 |
 | ----------------------- | --------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Autumn Leaves           | `!autumn-leaves`      | [`src/autumn-leaves/autumn-leaves.html`](src/autumn-leaves/autumn-leaves.html)                                         |
 | Confetti Explosion      | `!confetti-explosion` | [`src/confetti-explosion/confetti-explosion.html`](src/confetti-explosion/confetti-explosion.html)                     |
 | Confetti Rain           | `!confetti-rain`      | [`src/confetti-rain/confetti-rain.html`](src/confetti-rain/confetti-rain.html)                                         |
 | Fireworks               | `!fireworks`          | [`src/fireworks/fireworks.html`](src/fireworks/fireworks.html)                                                         |
