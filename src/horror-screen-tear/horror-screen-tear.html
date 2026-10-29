@@ -1,0 +1,847 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Horror Screen Tear</title>
+
+    <style>
+      /* Transparent background is required for OBS overlays */
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: transparent;
+        font-family: sans-serif;
+      }
+
+      /* Canvas styling for OBS overlays */
+      canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+      }
+    </style>
+
+    <script src="https://cdn.jsdelivr.net/npm/comfy.js@latest/dist/comfy.min.js"></script>
+  </head>
+  <body>
+    <canvas id="horror-screen-tear-canvas"></canvas>
+
+    <script>
+      // ==========================================
+      // 1. CONFIGURATION
+      // ==========================================
+
+      const CONFIG = {
+        appearDelay: 0,
+        openDuration: 2200,
+        holdDuration: 4500,
+        closeDuration: 900,
+        openWidth: 34,
+        showHands: true,
+        showEyes: true,
+        screenShake: true,
+        vignette: true,
+        skinColor: "#bdb6a6",
+        nailColor: "#2b1e18",
+        voidColor: "#050000",
+        glowColor: "#7a0000",
+        rimColor: "#e6dfd2",
+        eyeColor: "#ff2a12",
+      };
+
+      const LOCAL_CONFIG = {
+        ripShare: 0.22,
+        emergeShare: 0.25,
+        edgePoints: 72,
+        crackJag: 18,
+        fiberJag: 7,
+        crackWidth: 5,
+        crackBranches: 10,
+        fingerCount: 4,
+        fingerWidth: 30,
+        fingerLength: 170,
+        fingerSpacing: 1.08,
+        fingerCurl: 0.16,
+        tremble: 1.2,
+        shakeStrength: 9,
+        debrisCount: 70,
+        gravity: 0.35,
+        blinkAt: 0.55,
+      };
+
+      const TWITCH = {
+        enabled: false,
+        channel: "your_twitch_channel",
+        command: "!screen",
+        globalCooldown: 500,
+        userCooldown: 5000,
+      };
+
+      // ==========================================
+      // 2. CONSTANTS
+      // ==========================================
+
+      const canvas = document.querySelector("#horror-screen-tear-canvas");
+      const context = canvas.getContext("2d");
+
+      const FINGER_LENGTHS = [0.82, 1, 0.94, 0.72];
+      const SEGMENT_SHARES = [0.46, 0.32, 0.22];
+      const SEGMENT_WIDTHS = [1, 0.9, 0.8];
+
+      let width = 0;
+      let height = 0;
+      let tear = null;
+      let debris = [];
+      let frameId = 0;
+      let lastFrameAt = 0;
+      let delayTimer = 0;
+
+      // Resize the canvas backing store for crisp rendering.
+      function resizeCanvas() {
+        const pixelRatio = window.devicePixelRatio || 1;
+
+        width = window.innerWidth;
+        height = window.innerHeight;
+        canvas.width = Math.round(width * pixelRatio);
+        canvas.height = Math.round(height * pixelRatio);
+        context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+      }
+
+      window.addEventListener("resize", resizeCanvas);
+      resizeCanvas();
+
+      // ==========================================
+      // 3. ANIMATION
+      // ==========================================
+
+      // Returns a random number within the requested range.
+      function randomBetween(min, max) {
+        return min + Math.random() * (max - min);
+      }
+
+      // Limits a value to the 0 to 1 range.
+      function clamp01(value) {
+        return Math.min(1, Math.max(0, value));
+      }
+
+      // Eases a progress value smoothly in and out.
+      function easeInOutCubic(value) {
+        return value < 0.5
+          ? 4 * value * value * value
+          : 1 - Math.pow(-2 * value + 2, 3) / 2;
+      }
+
+      // Eases a progress value with a fast start.
+      function easeOutCubic(value) {
+        return 1 - Math.pow(1 - value, 3);
+      }
+
+      // Eases a progress value with a slow start.
+      function easeInCubic(value) {
+        return value * value * value;
+      }
+
+      // Scales 1080p design sizes to the current source size.
+      function getScale() {
+        return Math.min(width / 1920, height / 1080);
+      }
+
+      // Builds the random tear line, its side cracks, and both hands.
+      function createTear(now) {
+        const points = [];
+        const branches = [];
+        const fingers = [];
+        let drift = 0;
+
+        for (let index = 0; index < LOCAL_CONFIG.edgePoints; index += 1) {
+          const progress = index / (LOCAL_CONFIG.edgePoints - 1);
+          const spike =
+            (index % 2 ? 1 : -1) *
+            randomBetween(0.2, 1) *
+            LOCAL_CONFIG.crackJag *
+            0.5;
+
+          drift =
+            drift * 0.82 + randomBetween(-1, 1) * LOCAL_CONFIG.crackJag * 0.6;
+
+          points.push({
+            y: -0.04 + progress * 1.08,
+            offset: drift + spike,
+            left: randomBetween(0, LOCAL_CONFIG.fiberJag),
+            right: randomBetween(0, LOCAL_CONFIG.fiberJag),
+          });
+        }
+
+        for (let index = 0; index < LOCAL_CONFIG.crackBranches; index += 1) {
+          const side = index % 2 ? 1 : -1;
+          const branch = [{ x: 0, y: 0 }];
+          let angle = (side < 0 ? Math.PI : 0) + randomBetween(-0.7, 0.7);
+
+          for (let step = 0; step < 4; step += 1) {
+            const previous = branch[branch.length - 1];
+            const length = randomBetween(18, 46);
+
+            angle += randomBetween(-0.5, 0.5);
+            branch.push({
+              x: previous.x + Math.cos(angle) * length,
+              y: previous.y + Math.sin(angle) * length,
+            });
+          }
+
+          branches.push({
+            side,
+            pointIndex: Math.floor(
+              randomBetween(0.12, 0.88) * LOCAL_CONFIG.edgePoints,
+            ),
+            points: branch,
+          });
+        }
+
+        for (const side of [-1, 1]) {
+          for (let index = 0; index < LOCAL_CONFIG.fingerCount; index += 1) {
+            const middle = (LOCAL_CONFIG.fingerCount - 1) / 2;
+
+            fingers.push({
+              side,
+              length:
+                FINGER_LENGTHS[index % FINGER_LENGTHS.length] *
+                randomBetween(0.94, 1.06),
+              yOffset:
+                (index - middle) *
+                  LOCAL_CONFIG.fingerWidth *
+                  LOCAL_CONFIG.fingerSpacing +
+                randomBetween(-3, 3),
+              splay: (index - middle) * 0.08 + randomBetween(-0.04, 0.04),
+              phase: randomBetween(0, Math.PI * 2),
+            });
+          }
+        }
+
+        return {
+          startedAt: now,
+          centerX: randomBetween(0.46, 0.54),
+          gripY: randomBetween(0.44, 0.54),
+          points,
+          branches,
+          fingers,
+          debrisLeft: LOCAL_CONFIG.debrisCount,
+        };
+      }
+
+      // Computes every phase value for the current frame.
+      function getTimeline(elapsed) {
+        const openTime = CONFIG.openDuration;
+        const ripEnd = openTime * LOCAL_CONFIG.ripShare;
+        const emergeEnd = ripEnd + openTime * LOCAL_CONFIG.emergeShare;
+        const closeStart = openTime + CONFIG.holdDuration;
+        const rip = clamp01(elapsed / ripEnd);
+        const emerge = clamp01((elapsed - ripEnd) / (emergeEnd - ripEnd));
+        const pull = clamp01((elapsed - emergeEnd) / (openTime - emergeEnd));
+        const hold = clamp01((elapsed - openTime) / CONFIG.holdDuration);
+        const close = clamp01((elapsed - closeStart) / CONFIG.closeDuration);
+        const breathing =
+          hold > 0 && close === 0 ? Math.sin(elapsed * 0.004) * 0.015 : 0;
+
+        return {
+          rip,
+          pull,
+          hold,
+          close,
+          grip: emerge * (1 - easeInCubic(clamp01(close / 0.45))),
+          open:
+            easeInOutCubic(pull) +
+            Math.sin(pull * Math.PI * 5) * 0.05 * (1 - pull) +
+            breathing,
+          shut: 1 - easeInCubic(clamp01((close - 0.3) / 0.7)),
+          alpha: 1 - clamp01((close - 0.8) / 0.2),
+          finished: elapsed >= closeStart + CONFIG.closeDuration,
+        };
+      }
+
+      // Converts the stored tear line into left and right pixel edges.
+      function computeEdges(timeline, scale) {
+        const centerX = tear.centerX * width;
+        const gripY = tear.gripY * height;
+        const halfMax = (width * CONFIG.openWidth) / 200;
+        const ripExtent = easeOutCubic(timeline.rip) * height * 0.75;
+        const crack =
+          LOCAL_CONFIG.crackWidth *
+          scale *
+          (timeline.rip * 0.5 + timeline.grip * 0.5);
+        const fiberFactor = Math.min(1, 0.4 + timeline.open);
+
+        return tear.points.map((point) => {
+          const y = point.y * height;
+          const distance = Math.abs(y - gripY);
+          const visible = clamp01((ripExtent - distance) / (height * 0.06));
+          const profile =
+            0.45 + 0.55 * Math.exp(-Math.pow(distance / (height * 0.32), 2));
+          const amount = visible * timeline.shut;
+          const half =
+            amount * (crack + halfMax * Math.max(0, timeline.open) * profile);
+          const x = centerX + point.offset * scale;
+
+          return {
+            y,
+            visible: amount,
+            reveal: clamp01((ripExtent - distance) / (height * 0.15)),
+            left: x - half - point.left * scale * amount * fiberFactor,
+            right: x + half + point.right * scale * amount * fiberFactor,
+          };
+        });
+      }
+
+      // Finds the edge position of one side at any vertical position.
+      function edgeAt(edges, side, y) {
+        const key = side < 0 ? "left" : "right";
+
+        for (let index = 1; index < edges.length; index += 1) {
+          if (edges[index].y >= y) {
+            const previous = edges[index - 1];
+            const next = edges[index];
+            const mix = (y - previous.y) / (next.y - previous.y);
+
+            return previous[key] + (next[key] - previous[key]) * mix;
+          }
+        }
+
+        return edges[edges.length - 1][key];
+      }
+
+      // Adds the opening shape to the current path.
+      function traceVoid(edges) {
+        context.moveTo(edges[0].left, edges[0].y);
+
+        for (const edge of edges) context.lineTo(edge.left, edge.y);
+
+        for (let index = edges.length - 1; index >= 0; index -= 1) {
+          context.lineTo(edges[index].right, edges[index].y);
+        }
+
+        context.closePath();
+      }
+
+      // Darkens the stream edges while the tear is open.
+      function drawVignette(strength) {
+        const gradient = context.createRadialGradient(
+          width / 2,
+          height / 2,
+          Math.min(width, height) * 0.3,
+          width / 2,
+          height / 2,
+          Math.max(width, height) * 0.75,
+        );
+
+        gradient.addColorStop(0, "rgba(0, 0, 0, 0)");
+        gradient.addColorStop(1, `rgba(0, 0, 0, ${0.6 * strength})`);
+        context.fillStyle = gradient;
+        context.fillRect(0, 0, width, height);
+      }
+
+      // Fills the opening with darkness and a faint inner glow.
+      function drawVoid(edges, timeline, scale, now) {
+        const gripY = tear.gripY * height;
+        const centerX = tear.centerX * width;
+        const radius = Math.max(40, (width * CONFIG.openWidth) / 100) * 1.4;
+        const glow = context.createRadialGradient(
+          centerX,
+          gripY,
+          0,
+          centerX,
+          gripY,
+          radius,
+        );
+
+        context.save();
+        context.beginPath();
+        traceVoid(edges);
+        context.shadowColor = "rgba(0, 0, 0, 0.85)";
+        context.shadowBlur = 28 * scale;
+        context.fillStyle = CONFIG.voidColor;
+        context.fill();
+        context.restore();
+
+        glow.addColorStop(0, CONFIG.glowColor);
+        glow.addColorStop(1, "rgba(0, 0, 0, 0)");
+        context.save();
+        context.beginPath();
+        traceVoid(edges);
+        context.clip();
+        context.globalAlpha =
+          (0.55 + Math.sin(now * 0.003) * 0.15) * timeline.alpha;
+        context.fillStyle = glow;
+        context.fillRect(
+          centerX - radius,
+          gripY - radius,
+          radius * 2,
+          radius * 2,
+        );
+        context.restore();
+      }
+
+      // Draws two glowing eyes watching from inside the opening.
+      function drawEyes(edges, timeline, scale, now) {
+        const eyeY = tear.gripY * height - 70 * scale;
+        const left = edgeAt(edges, -1, eyeY);
+        const right = edgeAt(edges, 1, eyeY);
+        const spacing = 34 * scale;
+        const size = 13 * scale;
+        const holdTime = timeline.hold * CONFIG.holdDuration;
+        const blinkTime = LOCAL_CONFIG.blinkAt * CONFIG.holdDuration;
+        const blink = clamp01(1 - Math.abs(holdTime - blinkTime) / 120);
+        const fadeIn = clamp01((timeline.pull - 0.75) / 0.25);
+        const room = clamp01((right - left - spacing * 2) / (size * 6));
+        const alpha = fadeIn * room * timeline.shut;
+
+        if (alpha <= 0) return;
+
+        const centerX = (left + right) / 2 + Math.sin(now * 0.0011) * 4 * scale;
+
+        context.save();
+        context.globalAlpha = alpha * timeline.alpha;
+        context.shadowColor = CONFIG.eyeColor;
+        context.shadowBlur = 22 * scale;
+
+        for (const side of [-1, 1]) {
+          const x = centerX + side * spacing;
+
+          context.beginPath();
+          context.ellipse(
+            x,
+            eyeY,
+            size,
+            size * 0.42 * (1 - blink * 0.95),
+            side * -0.18,
+            0,
+            Math.PI * 2,
+          );
+          context.fillStyle = CONFIG.eyeColor;
+          context.fill();
+
+          context.beginPath();
+          context.ellipse(
+            x,
+            eyeY,
+            size * 0.14,
+            size * 0.36 * (1 - blink),
+            0,
+            0,
+            Math.PI * 2,
+          );
+          context.fillStyle = "#000";
+          context.fill();
+        }
+
+        context.restore();
+      }
+
+      // Draws the torn, light rim along each visible edge.
+      function drawRims(edges, timeline, scale) {
+        context.save();
+        context.globalAlpha = timeline.alpha;
+        context.lineJoin = "round";
+
+        for (const key of ["left", "right"]) {
+          for (const [color, lineWidth] of [
+            ["rgba(0, 0, 0, 0.6)", 5 * scale],
+            [CONFIG.rimColor, 2 * scale],
+          ]) {
+            let drawing = false;
+
+            context.beginPath();
+
+            for (const edge of edges) {
+              if (edge.visible <= 0.02) {
+                drawing = false;
+                continue;
+              }
+
+              if (drawing) context.lineTo(edge[key], edge.y);
+              else context.moveTo(edge[key], edge.y);
+
+              drawing = true;
+            }
+
+            context.strokeStyle = color;
+            context.lineWidth = lineWidth;
+            context.stroke();
+          }
+        }
+
+        context.restore();
+      }
+
+      // Draws the thin cracks spreading away from the tear.
+      function drawBranches(edges, timeline, scale) {
+        context.save();
+        context.globalAlpha = timeline.alpha * 0.85;
+        context.lineJoin = "round";
+
+        for (const branch of tear.branches) {
+          const edge = edges[branch.pointIndex];
+          const growth = edge.reveal * timeline.shut;
+
+          if (growth <= 0) continue;
+
+          const originX = branch.side < 0 ? edge.left : edge.right;
+
+          for (const [color, lineWidth, offset] of [
+            ["rgba(255, 255, 255, 0.22)", 1.2 * scale, 1],
+            ["rgba(0, 0, 0, 0.65)", 1.6 * scale, 0],
+          ]) {
+            context.beginPath();
+
+            branch.points.forEach((point, index) => {
+              const x = originX + point.x * scale * growth + offset;
+              const y = edge.y + point.y * scale * growth + offset;
+
+              if (index === 0) context.moveTo(x, y);
+              else context.lineTo(x, y);
+            });
+
+            context.strokeStyle = color;
+            context.lineWidth = lineWidth;
+            context.stroke();
+          }
+        }
+
+        context.restore();
+      }
+
+      // Draws one shaded finger reaching from the opening over its edge.
+      function drawFinger(finger, edges, timeline, scale, now, inside) {
+        const turn = finger.side < 0 ? -1 : 1;
+        const fingerWidth = LOCAL_CONFIG.fingerWidth * scale;
+        const length = finger.length * LOCAL_CONFIG.fingerLength * scale;
+        const depth = length * 0.35;
+        const tremble =
+          Math.sin(now * 0.05 + finger.phase) *
+          LOCAL_CONFIG.tremble *
+          scale *
+          (0.4 + timeline.pull);
+        const y = tear.gripY * height + finger.yOffset * scale + tremble;
+        const edgeX = edgeAt(edges, finger.side, y);
+        const baseAngle = finger.side < 0 ? Math.PI : 0;
+        let angle = baseAngle + turn * finger.splay;
+        let remaining = length * timeline.grip;
+        let x = edgeX - Math.cos(baseAngle) * depth;
+        let currentY = y;
+
+        context.lineCap = "round";
+
+        for (let index = 0; index < SEGMENT_SHARES.length; index += 1) {
+          const segmentLength = Math.min(
+            remaining,
+            SEGMENT_SHARES[index] * length,
+          );
+
+          if (segmentLength <= 0) break;
+
+          const segmentWidth = fingerWidth * SEGMENT_WIDTHS[index];
+          const nextX = x + Math.cos(angle) * segmentLength;
+          const nextY = currentY + Math.sin(angle) * segmentLength;
+          const normalX = -Math.sin(angle) * segmentWidth * 0.5;
+          const normalY = Math.cos(angle) * segmentWidth * 0.5;
+          const middleX = (x + nextX) / 2;
+          const middleY = (currentY + nextY) / 2;
+          const shading = context.createLinearGradient(
+            middleX - normalX,
+            middleY - normalY,
+            middleX + normalX,
+            middleY + normalY,
+          );
+
+          shading.addColorStop(0, "rgba(0, 0, 0, 0.5)");
+          shading.addColorStop(0.35, "rgba(255, 255, 255, 0.12)");
+          shading.addColorStop(0.55, "rgba(0, 0, 0, 0)");
+          shading.addColorStop(1, "rgba(0, 0, 0, 0.55)");
+
+          context.save();
+
+          if (!inside) {
+            context.shadowColor = "rgba(0, 0, 0, 0.55)";
+            context.shadowBlur = 12 * scale;
+            context.shadowOffsetY = 5 * scale;
+          }
+
+          context.beginPath();
+          context.moveTo(x, currentY);
+          context.lineTo(nextX, nextY);
+          context.strokeStyle = CONFIG.skinColor;
+          context.lineWidth = segmentWidth;
+          context.stroke();
+          context.restore();
+
+          context.beginPath();
+          context.moveTo(x, currentY);
+          context.lineTo(nextX, nextY);
+          context.strokeStyle = shading;
+          context.lineWidth = segmentWidth;
+          context.stroke();
+
+          if (index > 0) {
+            context.beginPath();
+            context.moveTo(x - normalX * 0.55, currentY - normalY * 0.55);
+            context.lineTo(x + normalX * 0.55, currentY + normalY * 0.55);
+            context.strokeStyle = "rgba(0, 0, 0, 0.35)";
+            context.lineWidth = 1.2 * scale;
+            context.stroke();
+          }
+
+          const isTip =
+            index === SEGMENT_SHARES.length - 1 &&
+            segmentLength > SEGMENT_SHARES[index] * length * 0.4;
+
+          if (isTip) {
+            context.beginPath();
+            context.ellipse(
+              nextX + Math.cos(angle) * segmentWidth * 0.08,
+              nextY + Math.sin(angle) * segmentWidth * 0.08,
+              segmentWidth * 0.5,
+              segmentWidth * 0.31,
+              angle,
+              0,
+              Math.PI * 2,
+            );
+            context.fillStyle = CONFIG.nailColor;
+            context.fill();
+            context.strokeStyle = "rgba(255, 255, 255, 0.18)";
+            context.lineWidth = 1 * scale;
+            context.stroke();
+          }
+
+          remaining -= segmentLength;
+          x = nextX;
+          currentY = nextY;
+          angle += turn * LOCAL_CONFIG.fingerCurl;
+        }
+
+        if (inside) {
+          const startX = edgeX - Math.cos(baseAngle) * depth;
+          const darkness = context.createLinearGradient(startX, y, edgeX, y);
+
+          darkness.addColorStop(0, CONFIG.voidColor);
+          darkness.addColorStop(1, "rgba(0, 0, 0, 0)");
+          context.beginPath();
+          context.moveTo(startX, y);
+          context.lineTo(edgeX, y + Math.sin(angle) * 2);
+          context.strokeStyle = darkness;
+          context.lineWidth = fingerWidth * 1.4;
+          context.stroke();
+        }
+      }
+
+      // Draws both hands, inside the darkness first and then over the edges.
+      function drawHands(edges, timeline, scale, now) {
+        if (timeline.grip <= 0) return;
+
+        const crackX = tear.centerX * width;
+
+        context.save();
+        context.beginPath();
+        traceVoid(edges);
+        context.clip();
+
+        for (const finger of tear.fingers) {
+          drawFinger(finger, edges, timeline, scale, now, true);
+        }
+
+        context.restore();
+
+        for (const side of [-1, 1]) {
+          context.save();
+          context.beginPath();
+          context.rect(0, 0, width, height);
+          traceVoid(edges);
+          context.clip("evenodd");
+          context.beginPath();
+
+          if (side < 0) context.rect(0, 0, crackX, height);
+          else context.rect(crackX, 0, width - crackX, height);
+
+          context.clip();
+
+          for (const finger of tear.fingers) {
+            if (finger.side === side) {
+              drawFinger(finger, edges, timeline, scale, now, false);
+            }
+          }
+
+          context.restore();
+        }
+      }
+
+      // Releases screen fragments from the ripping or stretching edges.
+      function spawnDebris(edges, timeline, scale) {
+        const ripping = timeline.rip < 1;
+        const pulling = timeline.pull > 0 && timeline.pull < 1;
+        const rate = ripping ? 3 : pulling ? 1 : 0;
+
+        for (let index = 0; index < rate && tear.debrisLeft > 0; index += 1) {
+          const visibleEdges = edges.filter((edge) => edge.visible > 0.1);
+
+          if (!visibleEdges.length) return;
+
+          const edge =
+            visibleEdges[Math.floor(Math.random() * visibleEdges.length)];
+          const side = Math.random() < 0.5 ? -1 : 1;
+
+          tear.debrisLeft -= 1;
+          debris.push({
+            x: side < 0 ? edge.left : edge.right,
+            y: edge.y,
+            vx: side * randomBetween(0.4, 2.6) * scale,
+            vy: randomBetween(-2.4, 0.4) * scale,
+            size: randomBetween(2, 7) * scale,
+            rotation: randomBetween(0, Math.PI * 2),
+            spin: randomBetween(-0.2, 0.2),
+            color: Math.random() < 0.5 ? CONFIG.rimColor : CONFIG.voidColor,
+          });
+        }
+      }
+
+      // Moves, draws, and removes finished screen fragments.
+      function updateDebris(step, scale) {
+        debris = debris.filter((piece) => piece.y < height + 40);
+
+        for (const piece of debris) {
+          piece.vy += LOCAL_CONFIG.gravity * scale * step;
+          piece.x += piece.vx * step;
+          piece.y += piece.vy * step;
+          piece.rotation += piece.spin * step;
+
+          context.save();
+          context.translate(piece.x, piece.y);
+          context.rotate(piece.rotation);
+          context.beginPath();
+          context.moveTo(-piece.size, -piece.size * 0.4);
+          context.lineTo(piece.size * 0.7, -piece.size * 0.6);
+          context.lineTo(piece.size * 0.2, piece.size * 0.8);
+          context.closePath();
+          context.fillStyle = piece.color;
+          context.fill();
+          context.restore();
+        }
+      }
+
+      // Returns the current random screen-shake offset in pixels.
+      function getShake(timeline, scale) {
+        if (!CONFIG.screenShake) return 0;
+
+        const ripShake = timeline.rip < 1 ? 1 - timeline.rip : 0;
+        const pullShake = timeline.pull > 0 && timeline.pull < 1 ? 0.35 : 0;
+        const snapShake = timeline.close > 0.85 && timeline.close < 1 ? 0.8 : 0;
+        const strength = Math.max(ripShake, pullShake, snapShake);
+
+        return strength * LOCAL_CONFIG.shakeStrength * scale;
+      }
+
+      // Renders one frame and stops the loop once everything has finished.
+      function renderFrame(now) {
+        const step = Math.min(3, (now - lastFrameAt) / (1000 / 60) || 1);
+        const scale = getScale();
+
+        lastFrameAt = now;
+        context.clearRect(0, 0, width, height);
+
+        if (!tear) {
+          frameId = 0;
+          return;
+        }
+
+        const timeline = getTimeline(now - tear.startedAt);
+        const edges = computeEdges(timeline, scale);
+        const shake = getShake(timeline, scale);
+
+        if (!timeline.finished) {
+          if (CONFIG.vignette) {
+            drawVignette(
+              Math.max(timeline.rip * 0.4, timeline.open) *
+                timeline.shut *
+                timeline.alpha,
+            );
+          }
+
+          context.save();
+          context.translate(
+            randomBetween(-shake, shake),
+            randomBetween(-shake, shake),
+          );
+          context.globalAlpha = timeline.alpha;
+          drawVoid(edges, timeline, scale, now);
+          if (CONFIG.showEyes) drawEyes(edges, timeline, scale, now);
+          drawRims(edges, timeline, scale);
+          drawBranches(edges, timeline, scale);
+          if (CONFIG.showHands) drawHands(edges, timeline, scale, now);
+          spawnDebris(edges, timeline, scale);
+          context.restore();
+        }
+
+        updateDebris(step, scale);
+
+        if (timeline.finished && !debris.length) {
+          tear = null;
+          frameId = 0;
+          context.clearRect(0, 0, width, height);
+          return;
+        }
+
+        frameId = requestAnimationFrame(renderFrame);
+      }
+
+      // Opens a fresh tear, replacing any tear that is still visible.
+      function startTear() {
+        const now = performance.now();
+
+        delayTimer = 0;
+        tear = createTear(now);
+        debris = [];
+
+        if (!frameId) {
+          lastFrameAt = now;
+          frameId = requestAnimationFrame(renderFrame);
+        }
+      }
+
+      // Schedules the tear after the configured appearance delay.
+      function triggerScreenTear() {
+        window.clearTimeout(delayTimer);
+        delayTimer = window.setTimeout(
+          startTear,
+          Math.max(0, CONFIG.appearDelay),
+        );
+      }
+
+      // ==========================================
+      // 3. CALLBACK (COMFYJS)
+      // ==========================================
+
+      if (location.search.includes("preview")) triggerScreenTear();
+
+      if (TWITCH.enabled) {
+        ComfyJS.onCommand = (_, command, _message, _flags, extra) => {
+          if (`!${command}`.toLowerCase() !== TWITCH.command.toLowerCase())
+            return;
+          if (
+            extra.sinceLastCommand.any > 0 &&
+            extra.sinceLastCommand.any < TWITCH.globalCooldown
+          )
+            return;
+          if (
+            extra.sinceLastCommand.user > 0 &&
+            extra.sinceLastCommand.user < TWITCH.userCooldown
+          )
+            return;
+          triggerScreenTear();
+        };
+        ComfyJS.Init(TWITCH.channel);
+      }
+    </script>
+  </body>
+</html>

@@ -19,6 +19,7 @@ No build step is required for the animations themselves. Each source lives in it
 | Fireworks               | `!fireworks`          | [`src/fireworks/fireworks.html`](src/fireworks/fireworks.html)                                                         |
 | Gifts Rain              | `!gifts`              | [`src/gifts-rain/gifts-rain.html`](src/gifts-rain/gifts-rain.html)                                                     |
 | Hellfire Candles        | `!hellfire`           | [`src/hellfire-candles/hellfire-candles.html`](src/hellfire-candles/hellfire-candles.html)                             |
+| Horror Screen Tear      | `!screen`             | [`src/horror-screen-tear/horror-screen-tear.html`](src/horror-screen-tear/horror-screen-tear.html)                     |
 | Meteor Shower           | `!meteor-shower`      | [`src/meteor-shower/meteor-shower.html`](src/meteor-shower/meteor-shower.html)                                         |
 | Party Lights Laser      | `!party-laser`        | [`src/party-lights-laser/party-lights-laser.html`](src/party-lights-laser/party-lights-laser.html)                     |
 | Party Lights Spotlights | `!party-spotlights`   | [`src/party-lights-spotlights/party-lights-spotlights.html`](src/party-lights-spotlights/party-lights-spotlights.html) |
