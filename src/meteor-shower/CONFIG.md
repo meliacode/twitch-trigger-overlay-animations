@@ -27,3 +27,7 @@ const TWITCH = {
 | `arcHeight`       | `260`                                                                            | Height of the left-to-right semicircular path in pixels. Individual meteors vary slightly around this value.                      |
 | `meteorSize`      | `1.5`                                                                            | Base radius of each meteor head in pixels.                                                                                        |
 | `colors`          | `white, red, pink, purple, blueDark, blueLight, blueDark, green, yellow, orange` | Meteor palette. Choose one or more of: `white`, `red`, `pink`, `purple`, `blueDark`, `blueLight`, `green`, `yellow`, or `orange`. |
+
+## LOCAL_CONFIG
+
+No internal tuning values are currently exposed for this animation.

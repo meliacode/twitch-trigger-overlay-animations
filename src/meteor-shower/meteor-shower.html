@@ -30,7 +30,7 @@
     <script src="https://cdn.jsdelivr.net/npm/comfy.js@latest/dist/comfy.min.js"></script>
   </head>
   <body>
-    <canvas id="shower-canvas"></canvas>
+    <canvas id="meteor-shower-canvas"></canvas>
 
     <script>
       // ==========================================
@@ -70,6 +70,8 @@
         ],
       };
 
+      const LOCAL_CONFIG = {};
+
       const TWITCH = {
         enabled: false,
         channel: "your_twitch_channel",
@@ -82,7 +84,7 @@
       // 2. CONSTANTS
       // ==========================================
 
-      const canvas = document.querySelector("#shower-canvas");
+      const canvas = document.querySelector("#meteor-shower-canvas");
       const ctx = canvas.getContext("2d");
       const meteors = [];
       const random = (minimum, maximum) =>
@@ -91,6 +93,7 @@
       let height = 0;
       let lastFrameTime;
 
+      // Updates the drawing surface for the viewport.
       function resizeCanvas() {
         const pixelRatio = window.devicePixelRatio || 1;
         width = window.innerWidth;
@@ -211,6 +214,7 @@
         }
       }
 
+      // Starts a new effect instance.
       function triggerMeteorShower() {
         for (let index = 0; index < CONFIG.count; index++) {
           window.setTimeout(() => {
@@ -221,6 +225,7 @@
         }
       }
 
+      // Runs this animation step.
       function animate(now) {
         const delta = lastFrameTime
           ? Math.min((now - lastFrameTime) / 1000, 0.05)

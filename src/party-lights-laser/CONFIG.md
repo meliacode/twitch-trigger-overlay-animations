@@ -22,3 +22,7 @@ const TWITCH = {
 | -------------- | ------------- | ----------------------------------------------- |
 | `duration`     | `10000`       | Total party effect duration in milliseconds.    |
 | `fadeDuration` | `1000`        | Duration of the final fade-out in milliseconds. |
+
+## LOCAL_CONFIG
+
+No internal tuning values are currently exposed for this animation.

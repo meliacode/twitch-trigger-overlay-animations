@@ -30,7 +30,7 @@
     <script src="https://cdn.jsdelivr.net/npm/comfy.js@latest/dist/comfy.min.js"></script>
   </head>
   <body>
-    <canvas id="star-canvas"></canvas>
+    <canvas id="starry-sky-canvas"></canvas>
 
     <script>
       // ==========================================
@@ -42,6 +42,8 @@
         shineStrength: 1,
         duration: 9000,
       };
+
+      const LOCAL_CONFIG = {};
 
       const TWITCH = {
         enabled: false,
@@ -55,7 +57,7 @@
       // 2. CONSTANTS
       // ==========================================
 
-      const canvas = document.querySelector("#star-canvas");
+      const canvas = document.querySelector("#starry-sky-canvas");
       const context = canvas.getContext("2d");
 
       const stars = [];
@@ -78,6 +80,7 @@
         context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
       }
 
+      // Creates animation data for the effect.
       function createStars() {
         stars.length = 0;
         for (let index = 0; index < CONFIG.starCount; index++) {
@@ -91,6 +94,7 @@
         }
       }
 
+      // Draws the current animation state.
       function drawStar(star, elapsed, opacity) {
         const pulse = (Math.sin(elapsed * star.speed + star.phase) + 1) / 2;
         const brightness = 0.25 + pulse * 0.75;
@@ -141,6 +145,7 @@
         context.restore();
       }
 
+      // Runs this animation step.
       function animate(now) {
         if (startedAt === null) return;
 
@@ -164,6 +169,7 @@
         frameId = requestAnimationFrame(animate);
       }
 
+      // Starts a new effect instance.
       function triggerStarrySky() {
         if (frameId !== null) cancelAnimationFrame(frameId);
         createStars();

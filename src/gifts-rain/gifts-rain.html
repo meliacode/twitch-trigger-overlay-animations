@@ -30,7 +30,7 @@
     <script src="https://cdn.jsdelivr.net/npm/comfy.js@latest/dist/comfy.min.js"></script>
   </head>
   <body>
-    <canvas id="gifts-canvas"></canvas>
+    <canvas id="gifts-rain-canvas"></canvas>
 
     <script>
       // ==========================================
@@ -67,6 +67,8 @@
         ],
       };
 
+      const LOCAL_CONFIG = {};
+
       const TWITCH = {
         enabled: false,
         channel: "your_twitch_channel",
@@ -79,7 +81,7 @@
       // 2. CONSTANTS
       // ==========================================
 
-      const canvas = document.getElementById("gifts-canvas");
+      const canvas = document.getElementById("gifts-rain-canvas");
       const ctx = canvas.getContext("2d");
 
       const giftList = [];
@@ -195,6 +197,7 @@
         }
       }
 
+      // Starts a new effect instance.
       function triggerGiftRain() {
         for (let i = 0; i < CONFIG.count; i++) {
           giftList.push(new Gift());
@@ -204,6 +207,7 @@
       // Render loop
       let lastFrameTime;
 
+      // Runs this animation step.
       function animate(now) {
         const delta = lastFrameTime
           ? Math.min((now - lastFrameTime) / 1000, 0.05)

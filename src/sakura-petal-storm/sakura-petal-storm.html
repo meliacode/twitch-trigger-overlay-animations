@@ -30,7 +30,7 @@
     <script src="https://cdn.jsdelivr.net/npm/comfy.js@latest/dist/comfy.min.js"></script>
   </head>
   <body>
-    <canvas id="sakura-canvas"></canvas>
+    <canvas id="sakura-petal-storm-canvas"></canvas>
 
     <script>
       // ==========================================
@@ -47,6 +47,8 @@
         colors: ["#ffd6e5", "#ffb8d2", "#fff0f6", "#f59aba"],
       };
 
+      const LOCAL_CONFIG = {};
+
       const TWITCH = {
         enabled: false,
         channel: "your_twitch_channel",
@@ -59,7 +61,7 @@
       // 2. CONSTANTS
       // ==========================================
 
-      const canvas = document.querySelector("#sakura-canvas");
+      const canvas = document.querySelector("#sakura-petal-storm-canvas");
       const context = canvas.getContext("2d");
 
       const storms = [];
@@ -72,6 +74,7 @@
       const random = (minimum, maximum) =>
         Math.random() * (maximum - minimum) + minimum;
 
+      // Updates the drawing surface for the viewport.
       function resizeCanvas() {
         const pixelRatio = window.devicePixelRatio || 1;
         width = window.innerWidth;
@@ -168,6 +171,7 @@
         }
       }
 
+      // Creates animation data for the effect.
       function createStorm(now) {
         const petals = Array.from(
           { length: CONFIG.petalCount },
@@ -181,6 +185,7 @@
         });
       }
 
+      // Draws the current animation state.
       function render(now) {
         const delta = lastFrame ? Math.min((now - lastFrame) / 1000, 0.05) : 0;
         lastFrame = now;
@@ -208,6 +213,7 @@
         requestAnimationFrame(render);
       }
 
+      // Starts a new effect instance.
       function triggerSakuraPetalStorm() {
         createStorm(performance.now());
       }

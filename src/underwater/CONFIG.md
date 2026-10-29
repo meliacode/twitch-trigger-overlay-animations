@@ -33,3 +33,7 @@ const TWITCH = {
 | `bubbleMinSpeed`       | `18`                        | Minimum upward bubble speed, in pixels per second.                                                                                           |
 | `bubbleMaxSpeed`       | `62`                        | Maximum upward bubble speed, in pixels per second. Must be at least `bubbleMinSpeed`.                                                        |
 | `bubbleSway`           | `0.8`                       | Maximum side-to-side bubble drift, in pixels per frame. Use `0` for straight movement.                                                       |
+
+## LOCAL_CONFIG
+
+No internal tuning values are currently exposed for this animation.

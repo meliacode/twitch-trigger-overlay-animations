@@ -41,8 +41,8 @@
         effectDuration: 8000,
 
         waterLevel: 20,
-        waterColorTop: "rgba(44, 164, 215, 0.2)",
-        waterColorBottom: "rgba(22, 94, 184, 1)",
+        waterColorTop: "rgba(16, 119, 147, 0.2)",
+        waterColorBottom: "rgba(16, 53, 147, 1)",
         surfaceWaveAmplitude: 5,
         surfaceWaveSpeed: 0.002,
 
@@ -54,6 +54,8 @@
         bubbleMaxSpeed: 62,
         bubbleSway: 0.8,
       };
+
+      const LOCAL_CONFIG = {};
 
       const TWITCH = {
         enabled: false,
@@ -174,7 +176,7 @@
 
           context.beginPath();
           context.arc(bubble.x, bubble.y, bubble.radius, 0, Math.PI * 2);
-          context.globalAlpha = 0.5;
+          context.globalAlpha = 0.3;
           context.strokeStyle = CONFIG.bubbleColor;
           context.lineWidth = 1.2;
           context.stroke();

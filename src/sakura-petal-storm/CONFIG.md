@@ -27,3 +27,7 @@ const TWITCH = {
 | `gustStrength` | `150`                                | Maximum side-to-side wind variation in CSS pixels per second.                         |
 | `petalSize`    | `[12, 25]`                           | Minimum and maximum petal size in CSS pixels.                                         |
 | `colors`       | `#ffd6e5, #ffb8d2, #fff0f6, #f59aba` | Petal colours, in any valid CSS colour format. Keep at least one colour in the array. |
+
+## LOCAL_CONFIG
+
+No internal tuning values are currently exposed for this animation.

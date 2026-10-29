@@ -27,3 +27,7 @@ const TWITCH = {
 | `speedMultiplier` | `3`                                                                    | Movement-speed multiplier. Use values above `1` for faster hearts and below `1` for slower hearts.                                                |
 | `originSpread`    | `0.3`                                                                  | Width and height of the randomized center zone, expressed as a fraction of the canvas. `0.3` limits burst origins to the middle 30% of each axis. |
 | `colors`          | `white, red, pink, purple, blueDark, blueLight, green, yellow, orange` | Heart palette. Choose one or more of: `white`, `red`, `pink`, `purple`, `blueDark`, `blueLight`, `green`, `yellow`, `orange`.                     |
+
+## LOCAL_CONFIG
+
+No internal tuning values are currently exposed for this animation.

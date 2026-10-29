@@ -23,3 +23,7 @@ const TWITCH = {
 | `count`    | `200`                                                                  | Number of butterflies released per trigger.                                                                                              |
 | `maxDelay` | `5`                                                                    | Maximum stagger delay before a butterfly begins to fly, in seconds.                                                                      |
 | `colors`   | `white, red, pink, purple, blueDark, blueLight, green, yellow, orange` | Named wing-color palette. Choose one or more of: `white`, `red`, `pink`, `purple`, `blueDark`, `blueLight`, `green`, `yellow`, `orange`. |
+
+## LOCAL_CONFIG
+
+No internal tuning values are currently exposed for this animation.

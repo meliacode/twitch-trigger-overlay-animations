@@ -43,6 +43,8 @@
         particlesPerBurst: 180,
       };
 
+      const LOCAL_CONFIG = {};
+
       const TWITCH = {
         enabled: false,
         channel: "your_twitch_channel",
@@ -144,6 +146,7 @@
         }
       }
 
+      // Runs this animation step.
       function explode(x, y) {
         const count = CONFIG.particlesPerBurst;
         const baseHue = Math.random() * 360;
@@ -153,6 +156,7 @@
         }
       }
 
+      // Starts a new effect instance.
       function triggerFireworks() {
         let rocketsLaunched = 0;
 

@@ -23,3 +23,7 @@ const TWITCH = {
 | `rocketCount`       | `25`          | Number of rockets launched per trigger.           |
 | `launchDelay`       | `150`         | Time between new rocket launches in milliseconds. |
 | `particlesPerBurst` | `180`         | Number of particles created by each explosion.    |
+
+## LOCAL_CONFIG
+
+No internal tuning values are currently exposed for this animation.

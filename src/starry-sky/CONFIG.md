@@ -18,8 +18,12 @@ const TWITCH = {
 
 ## Animation configuration
 
-| Setting | Default value | Description |
-| --- | --- | --- |
-| `starCount` | `180` | Number of stars shown for each trigger. |
-| `shineStrength` | `1` | Multiplier for each star's glow and sparkle rays. Use values above `1` for a stronger shine or values between `0` and `1` for a gentler shine. |
-| `duration` | `9000` | Total effect duration in milliseconds, including the fade in and fade out. |
+| Setting         | Default value | Description                                                                                                                                    |
+| --------------- | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `starCount`     | `180`         | Number of stars shown for each trigger.                                                                                                        |
+| `shineStrength` | `1`           | Multiplier for each star's glow and sparkle rays. Use values above `1` for a stronger shine or values between `0` and `1` for a gentler shine. |
+| `duration`      | `9000`        | Total effect duration in milliseconds, including the fade in and fade out.                                                                     |
+
+## LOCAL_CONFIG
+
+No internal tuning values are currently exposed for this animation.

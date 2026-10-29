@@ -23,3 +23,7 @@ const TWITCH = {
 | `beams`    | `9`                                                                    | Number of top-mounted moving spotlights.                                                                                     |
 | `duration` | `7000`                                                                 | Total effect duration in milliseconds.                                                                                       |
 | `colors`   | `white, red, pink, purple, blueDark, blueLight, green, yellow, orange` | Beam palette. Choose one or more of: `white`, `red`, `pink`, `purple`, `blueDark`, `blueLight`, `green`, `yellow`, `orange`. |
+
+## LOCAL_CONFIG
+
+No internal tuning values are currently exposed for this animation.

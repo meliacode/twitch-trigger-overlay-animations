@@ -24,3 +24,7 @@ const TWITCH = {
 | `duration` | `4200`                                                                 | Fall duration in milliseconds.                                                                                                   |
 | `delay`    | `13`                                                                   | Time between pieces in milliseconds.                                                                                             |
 | `colors`   | `white, red, pink, purple, blueDark, blueLight, green, yellow, orange` | Confetti palette. Choose one or more of: `white`, `red`, `pink`, `purple`, `blueDark`, `blueLight`, `green`, `yellow`, `orange`. |
+
+## LOCAL_CONFIG
+
+No internal tuning values are currently exposed for this animation.

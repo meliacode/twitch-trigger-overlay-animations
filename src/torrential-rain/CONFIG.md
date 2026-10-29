@@ -24,3 +24,7 @@ const TWITCH = {
 | `duration`  | `7500`        | How long each rain storm remains visible, in milliseconds.                     |
 | `showFog`   | `true`        | Set to `true` to show the subtle low fog, or `false` to hide it.               |
 | `showStorm` | `true`        | Set to `true` to show intermittent lightning flashes, or `false` to hide them. |
+
+## LOCAL_CONFIG
+
+No internal tuning values are currently exposed for this animation.

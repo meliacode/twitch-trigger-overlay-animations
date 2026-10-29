@@ -18,14 +18,13 @@
         font-family: sans-serif;
       }
 
-      /*  --- STYLE ELEMENTS ---  */
-
       /* Butterfly parent wrapper */
       .butterfly-container {
         position: absolute;
+        overflow: hidden;
         width: 40px;
         height: 40px;
-        bottom: -60px; /* Spawn positioned just beneath the viewport border */
+        bottom: -60px;
         pointer-events: none;
         will-change: transform, opacity;
       }
@@ -162,6 +161,8 @@
         ],
       };
 
+      const LOCAL_CONFIG = {};
+
       const TWITCH = {
         enabled: false,
         channel: "your_twitch_channel",
@@ -178,13 +179,15 @@
       // 3. ANIMATION
       // ==========================================
 
+      function butterflyColor() {
+        return CONFIG.colors[Math.floor(Math.random() * CONFIG.colors.length)];
+      }
+
       function createButterfly() {
         const container = document.createElement("div");
+        const randomColor = butterflyColor();
+
         container.className = "butterfly-container";
-
-        const randomColor =
-          CONFIG.colors[Math.floor(Math.random() * CONFIG.colors.length)];
-
         container.innerHTML = `
           <div class="butterfly color-${randomColor}">
             <div class="wing left"></div>
@@ -207,6 +210,7 @@
 
         let startTime = null;
 
+        // Runs this animation step.
         function animate(timestamp) {
           if (!startTime) startTime = timestamp;
           const elapsed = (timestamp - startTime) / 1000 - delay;
@@ -237,6 +241,7 @@
         requestAnimationFrame(animate);
       }
 
+      // Starts a new effect instance.
       function triggerButterflyShower() {
         for (let i = 0; i < CONFIG.count; i++) {
           createButterfly();

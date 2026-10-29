@@ -18,21 +18,22 @@
         font-family: sans-serif;
       }
 
-      /*  --- STYLE ELEMENTS ---  */
-
-      /* Primary container holding the overlay elements */
+      /* Stage styling for OBS overlays */
       #confetti-container {
         position: fixed;
+        overflow: hidden;
         inset: 0;
+        width: 100%;
+        height: 100%;
         pointer-events: none;
       }
 
-      /* Individual confetti piece */
+      /* Individual confetti styling */
       .piece {
         position: absolute;
         top: -4vh;
-        width: var(--w);
-        height: var(--h);
+        width: var(--width);
+        height: var(--height);
         background: var(--color);
         border-radius: 2px;
         animation: fall var(--duration) cubic-bezier(0.2, 0.65, 0.45, 1)
@@ -59,22 +60,10 @@
       // 1. CONFIGURATION
       // ==========================================
 
-      const COLOR_OPTIONS = {
-        white: "#ffffff",
-        red: "#ff3b30",
-        pink: "#ff4081",
-        purple: "#a855f7",
-        blueDark: "#1d4ed8",
-        blueLight: "#00d4ff",
-        green: "#44e09c",
-        yellow: "#ffeb3b",
-        orange: "#ff9800",
-      };
-
       const CONFIG = {
         count: 180,
-        duration: 4200,
-        delay: 13,
+        duration: 8000,
+        delay: 15,
         colors: [
           "white",
           "red",
@@ -87,6 +76,20 @@
           "orange",
         ],
       };
+
+      const COLOR_OPTIONS = {
+        white: "#ffffff",
+        red: "#ff3b30",
+        pink: "#ff4081",
+        purple: "#a855f7",
+        blueDark: "#1d4ed8",
+        blueLight: "#00d4ff",
+        green: "#44e09c",
+        yellow: "#ffeb3b",
+        orange: "#ff9800",
+      };
+
+      const LOCAL_CONFIG = {};
 
       const TWITCH = {
         enabled: false,
@@ -101,33 +104,45 @@
       // ==========================================
 
       const container = document.querySelector("#confetti-container");
-      const random = (a, b) => Math.random() * (b - a) + a;
 
       // ==========================================
       // 3. ANIMATION
       // ==========================================
 
-      function play() {
+      function randomNumber(minimum, maximum) {
+        return Math.random() * (maximum - minimum) + minimum;
+      }
+
+      function createConfettiPiece(index) {
+        const piece = document.createElement("i");
+
+        piece.className = "piece";
+        piece.style.left = `${randomNumber(0, 100)}vw`;
+        piece.style.setProperty("--width", `${randomNumber(6, 13)}px`);
+        piece.style.setProperty("--height", `${randomNumber(8, 21)}px`);
+        piece.style.setProperty(
+          "--color",
+          COLOR_OPTIONS[CONFIG.colors[index % CONFIG.colors.length]] ??
+            CONFIG.colors[index % CONFIG.colors.length],
+        );
+        piece.style.setProperty(
+          "--duration",
+          `${CONFIG.duration + randomNumber(-850, 950)}ms`,
+        );
+        piece.style.setProperty("--drift", `${randomNumber(-18, 18)}vw`);
+        piece.style.setProperty("--spin", `${randomNumber(360, 1260)}deg`);
+
+        return piece;
+      }
+
+      function triggerConfettiRain() {
         for (let i = 0; i < CONFIG.count; i++)
           setTimeout(() => {
-            const p = document.createElement("i");
-            p.className = "piece";
-            p.style.left = `${random(0, 100)}vw`;
-            p.style.setProperty("--w", `${random(6, 13)}px`);
-            p.style.setProperty("--h", `${random(8, 21)}px`);
-            p.style.setProperty(
-              "--color",
-              COLOR_OPTIONS[CONFIG.colors[i % CONFIG.colors.length]] ??
-                CONFIG.colors[i % CONFIG.colors.length],
-            );
-            p.style.setProperty(
-              "--duration",
-              `${CONFIG.duration + random(-850, 950)}ms`,
-            );
-            p.style.setProperty("--drift", `${random(-18, 18)}vw`);
-            p.style.setProperty("--spin", `${random(360, 1260)}deg`);
-            container.append(p);
-            p.addEventListener("animationend", () => p.remove());
+            const piece = createConfettiPiece(i);
+
+            container.append(piece);
+
+            piece.addEventListener("animationend", () => piece.remove());
           }, i * CONFIG.delay);
       }
 
@@ -135,7 +150,7 @@
       // 3. CALLBACK (COMFYJS)
       // ==========================================
 
-      if (location.search.includes("preview")) play();
+      if (location.search.includes("preview")) triggerConfettiRain();
 
       if (TWITCH.enabled) {
         ComfyJS.onCommand = (_, command, _message, _flags, extra) => {
@@ -151,7 +166,7 @@
             extra.sinceLastCommand.user < TWITCH.userCooldown
           )
             return;
-          play();
+          triggerConfettiRain();
         };
         ComfyJS.Init(TWITCH.channel);
       }

@@ -24,3 +24,7 @@ const TWITCH = {
 | `sideParticles`   | `250`         | Number of particles in each corner cannon.   |
 | `spread`          | `120`         | Angle spread of the center burst in degrees. |
 | `velocity`        | `50`          | Starting speed of confetti particles.        |
+
+## LOCAL_CONFIG
+
+No internal tuning values are currently exposed for this animation.

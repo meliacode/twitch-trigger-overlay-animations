@@ -31,7 +31,7 @@
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   </head>
   <body>
-    <canvas id="confetti-canvas"></canvas>
+    <canvas id="confetti-explosion-canvas"></canvas>
 
     <script>
       // ==========================================
@@ -45,6 +45,8 @@
         velocity: 50,
       };
 
+      const LOCAL_CONFIG = {};
+
       const TWITCH = {
         enabled: false,
         channel: "your_twitch_channel",
@@ -57,7 +59,7 @@
       // 2. CONSTANTS
       // ==========================================
 
-      const canvas = document.getElementById("confetti-canvas");
+      const canvas = document.getElementById("confetti-explosion-canvas");
 
       // Initialize the canvas-confetti instance with window scaling and high-performance workers
       const localConfetti = confetti.create(canvas, {
