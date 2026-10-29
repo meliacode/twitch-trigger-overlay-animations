@@ -2,7 +2,7 @@
 
 A horror-film screen tear: a jagged rip splits the stream, two pale hands push their fingers through and pull the opening apart, glowing eyes watch from the darkness, then the tear snaps shut.
 
-The source plays no sound. To add a scream, trigger an audio source from the same `!screen` command elsewhere (for example in OBS or a bot) and use `appearDelay` to line the visuals up with it.
+The source plays no sound. To add a scream, trigger an audio source from the same `!scream` command elsewhere (for example in OBS or a bot) and use `appearDelay` to line the visuals up with it.
 
 ## Twitch configuration
 
@@ -10,7 +10,7 @@ The source plays no sound. To add a scream, trigger an audio source from the sam
 const TWITCH = {
   enabled: false,
   channel: "your_twitch_channel",
-  command: "!screen",
+  command: "!scream",
   globalCooldown: 500,
   userCooldown: 5000,
 };

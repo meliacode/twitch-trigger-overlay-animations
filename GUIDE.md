@@ -4,9 +4,10 @@ This guide adds one animation from this repository as a transparent OBS Browser 
 
 ## 1. Choose and customize an animation
 
-1. In `src/`, open the folder for the animation you want.
-2. Open the HTML file with the same name as its folder.
-3. Edit the `CONFIG` and `TWITCH` object in the script section of the file. The folder's `CONFIG.md` lists the available settings and defaults.
+1. Download or clone the repository onto the computer running OBS. If you downloaded a ZIP, extract it first.
+2. In `src/`, open the folder for the animation you want; the [README](README.md#animations) lists the available sources and commands.
+3. Open the HTML file with the same name as its folder.
+4. Edit the `CONFIG` and `TWITCH` object in the script section of the file. The folder's `CONFIG.md` lists the available settings and defaults.
 
 Keep the HTML file together with its folder. The Browser source loads third-party scripts from CDNs, so OBS must be able to access the internet.
 
@@ -29,7 +30,7 @@ Use either of these approaches:
 - Open `dist/index.html`, select the animation, and click **Play animation**.
 - In OBS, temporarily append `?preview=1` to a URL-based source to trigger it once. For a local-file source, use the demo for this one-time preview, then restore the source to the HTML file.
 
-The demo is a local preview only. It does not send Twitch chat commands.
+The demo is a local preview only. It does not send Twitch chat commands. Most effects appear when triggered; Evil Pumpkin and Hellfire Candles also run automatically by default. Their `CONFIG.md` files explain how to change that behavior.
 
 ## 4. Enable a Twitch command (optional)
 
@@ -51,7 +52,7 @@ Restart or refresh the OBS Browser source after saving.
 ```js
 const TWITCH = {
   enabled: true,
-  channel: "meliacode",
+  channel: "your_twitch_channel",
   command: "!celebrate",
   globalCooldown: 500,
   userCooldown: 5000,

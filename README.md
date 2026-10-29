@@ -10,27 +10,20 @@ No build step is required for the animations themselves. Each source lives in it
 
 | Animation               | Twitch command        | Source                                                                                                                 |
 | ----------------------- | --------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| Anime Pop Bubbles       | `!anime-pop`          | [`src/anime-pop-bubbles/anime-pop-bubbles.html`](src/anime-pop-bubbles/anime-pop-bubbles.html)                         |
 | Autumn Leaves           | `!autumn-leaves`      | [`src/autumn-leaves/autumn-leaves.html`](src/autumn-leaves/autumn-leaves.html)                                         |
 | Confetti Explosion      | `!confetti-explosion` | [`src/confetti-explosion/confetti-explosion.html`](src/confetti-explosion/confetti-explosion.html)                     |
 | Confetti Rain           | `!confetti-rain`      | [`src/confetti-rain/confetti-rain.html`](src/confetti-rain/confetti-rain.html)                                         |
 | Cyber Glitch Screen     | `!cyber-glitch`       | [`src/cyber-glitch-screen/cyber-glitch-screen.html`](src/cyber-glitch-screen/cyber-glitch-screen.html)                 |
 | Cyberpunk Pew Pew       | `!pewpew`             | [`src/cyberpunk-pew-pew/cyberpunk-pew-pew.html`](src/cyberpunk-pew-pew/cyberpunk-pew-pew.html)                         |
-| Dimensional Portal      | `!dimensional-portal` | [`src/dimensional-portal/dimensional-portal.html`](src/dimensional-portal/dimensional-portal.html)                     |
 | Evil Pumpkin            | `!evil`               | [`src/evil-pumpkin/evil-pumpkin.html`](src/evil-pumpkin/evil-pumpkin.html)                                             |
 | Fireworks               | `!fireworks`          | [`src/fireworks/fireworks.html`](src/fireworks/fireworks.html)                                                         |
-| Game Crash Screen       | `!game-crash`         | [`src/game-crash-screen/game-crash-screen.html`](src/game-crash-screen/game-crash-screen.html)                         |
 | Gifts Rain              | `!gifts`              | [`src/gifts-rain/gifts-rain.html`](src/gifts-rain/gifts-rain.html)                                                     |
 | Hellfire Candles        | `!hellfire`           | [`src/hellfire-candles/hellfire-candles.html`](src/hellfire-candles/hellfire-candles.html)                             |
-| Horror Screen Tear      | `!screen`             | [`src/horror-screen-tear/horror-screen-tear.html`](src/horror-screen-tear/horror-screen-tear.html)                     |
+| Horror Screen Tear      | `!scream`             | [`src/horror-screen-tear/horror-screen-tear.html`](src/horror-screen-tear/horror-screen-tear.html)                     |
 | Meteor Shower           | `!meteor-shower`      | [`src/meteor-shower/meteor-shower.html`](src/meteor-shower/meteor-shower.html)                                         |
-| Mystic Smoke            | `!mystic-smoke`       | [`src/mystic-smoke/mystic-smoke.html`](src/mystic-smoke/mystic-smoke.html)                                             |
 | Party Lights Laser      | `!party-laser`        | [`src/party-lights-laser/party-lights-laser.html`](src/party-lights-laser/party-lights-laser.html)                     |
 | Party Lights Spotlights | `!party-spotlights`   | [`src/party-lights-spotlights/party-lights-spotlights.html`](src/party-lights-spotlights/party-lights-spotlights.html) |
-| Retro Coin Rain         | `!coin-rain`          | [`src/retro-coin-rain/retro-coin-rain.html`](src/retro-coin-rain/retro-coin-rain.html)                                 |
-| RPG Level Up            | `!level-up`           | [`src/rpg-level-up/rpg-level-up.html`](src/rpg-level-up/rpg-level-up.html)                                             |
 | Sakura Petal Storm      | `!sakura-storm`       | [`src/sakura-petal-storm/sakura-petal-storm.html`](src/sakura-petal-storm/sakura-petal-storm.html)                     |
-| Sniper Focus            | `!focus-shot`         | [`src/sniper-focus/sniper-focus.html`](src/sniper-focus/sniper-focus.html)                                             |
 | Spread Love Rainbow     | `!spreadlove`         | [`src/spread-love-rainbow/spread-love-rainbow.html`](src/spread-love-rainbow/spread-love-rainbow.html)                 |
 | Starry Sky              | `!starry-sky`         | [`src/starry-sky/starry-sky.html`](src/starry-sky/starry-sky.html)                                                     |
 | Swarm of Butterflies    | `!butterflies`        | [`src/swarm-of-butterflies/swarm-of-butterflies.html`](src/swarm-of-butterflies/swarm-of-butterflies.html)             |
@@ -39,15 +32,16 @@ No build step is required for the animations themselves. Each source lives in it
 
 ## Get started
 
-1. Choose an animation above and add its HTML file to OBS as a Browser source.
-2. Edit its `TWITCH` object to enable the matching chat command, if wanted.
-3. Adjust values in its `CONFIG` object; its folder's `CONFIG.md` explains every option.
+1. Download or clone this repository to your computer and extract it if downloaded as a ZIP.
+2. Choose an animation above, then add its HTML file to OBS as a local Browser source. Set the source dimensions to your canvas size.
+3. To enable a chat command, edit the file’s `TWITCH` object, set `enabled` to `true`, and enter your Twitch channel name.
+4. Adjust the `CONFIG` object if desired; the `CONFIG.md` beside the HTML file describes its settings and default command. Refresh the OBS source after saving changes.
 
 Read [GUIDE.md](GUIDE.md) for the OBS setup walkthrough. Read [INSTRUCTION.md](INSTRUCTION.md) to create an animation and add it to the demo.
 
 ## Preview locally
 
-Open [`dist/index.html`](dist/index.html) in a browser and select an animation. **Play animation** triggers it in the preview frame without Twitch. The same source can be previewed once by adding `?preview=1` to its URL.
+Open [`dist/index.html`](dist/index.html) in a browser and select an animation from the picker. **Play animation** triggers it in the preview frame without Twitch. The same source can be previewed once by adding `?preview=1` to its URL.
 
 For a local web server, install the development dependency and run:
 
@@ -77,7 +71,7 @@ INSTRUCTION.md           Add an animation to the repository
 Keep animations standalone, transparent, and safe to trigger repeatedly. Before submitting a new one, follow [INSTRUCTION.md](INSTRUCTION.md), update the demo, and run:
 
 ```bash
-npm run format
+npm run check
 ```
 
 ## License
