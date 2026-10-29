@@ -14,6 +14,7 @@ No build step is required for the animations themselves. Each source lives in it
 | Confetti Explosion      | `!confetti-explosion` | [`src/confetti-explosion/confetti-explosion.html`](src/confetti-explosion/confetti-explosion.html)                     |
 | Confetti Rain           | `!confetti-rain`      | [`src/confetti-rain/confetti-rain.html`](src/confetti-rain/confetti-rain.html)                                         |
 | Cyber Glitch Screen     | `!cyber-glitch`       | [`src/cyber-glitch-screen/cyber-glitch-screen.html`](src/cyber-glitch-screen/cyber-glitch-screen.html)                 |
+| Cyberpunk Pew Pew       | `!pewpew`             | [`src/cyberpunk-pew-pew/cyberpunk-pew-pew.html`](src/cyberpunk-pew-pew/cyberpunk-pew-pew.html)                         |
 | Fireworks               | `!fireworks`          | [`src/fireworks/fireworks.html`](src/fireworks/fireworks.html)                                                         |
 | Gifts Rain              | `!gifts`              | [`src/gifts-rain/gifts-rain.html`](src/gifts-rain/gifts-rain.html)                                                     |
 | Meteor Shower           | `!meteor-shower`      | [`src/meteor-shower/meteor-shower.html`](src/meteor-shower/meteor-shower.html)                                         |

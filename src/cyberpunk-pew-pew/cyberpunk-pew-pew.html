@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cyberpunk Pew Pew</title>
+
+    <style>
+      /* Transparent background is required for OBS overlays */
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: transparent;
+        font-family: sans-serif;
+      }
+
+      /* Canvas styling for OBS overlays */
+      canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+      }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/comfy.js@latest/dist/comfy.min.js"></script>
+  </head>
+  <body>
+    <canvas id="cyberpunk-pew-pew-canvas"></canvas>
+    <script>
+      // ==========================================
+      // 1. CONFIGURATION
+      // ==========================================
+      const CONFIG = {
+        boltCount: 7,
+        duration: 1800,
+        boltSpeed: 1.15,
+        boltWidth: 4,
+        colors: ["#00f6ff", "#ff2bd6", "#b7ff00"],
+        sparkCount: 13,
+        impactRadius: 62,
+      };
+
+      const LOCAL_CONFIG = {};
+
+      const TWITCH = {
+        enabled: false,
+        channel: "your_twitch_channel",
+        command: "!pewpew",
+        globalCooldown: 500,
+        userCooldown: 5000,
+      };
+
+      // ==========================================
+      // 2. CONSTANTS
+      // ==========================================
+
+      const canvas = document.querySelector("#cyberpunk-pew-pew-canvas");
+      const context = canvas.getContext("2d");
+      const volleys = [];
+      let width = 0;
+      let height = 0;
+      let pixelRatio = 1;
+      let animationFrame;
+
+      // ==========================================
+      // 3. ANIMATION
+      // ==========================================
+
+      function resize() {
+        pixelRatio = Math.max(1, window.devicePixelRatio || 1);
+        width = window.innerWidth;
+        height = window.innerHeight;
+        canvas.width = Math.round(width * pixelRatio);
+        canvas.height = Math.round(height * pixelRatio);
+        context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+      }
+
+      // Calculates a reusable animation value.
+      function randomBetween(minimum, maximum) {
+        return minimum + Math.random() * (maximum - minimum);
+      }
+
+      // Starts a new effect instance.
+      function triggerPewPew() {
+        const now = performance.now();
+        const bolts = Array.from({ length: CONFIG.boltCount }, (_, index) => {
+          const fromLeft = index % 2 === 0;
+          const startX = fromLeft ? -80 : width + 80;
+          const startY = randomBetween(height * 0.12, height * 0.88);
+          const targetX = randomBetween(width * 0.3, width * 0.7);
+          const targetY = randomBetween(height * 0.16, height * 0.84);
+          return {
+            startX,
+            startY,
+            targetX,
+            targetY,
+            color: CONFIG.colors[index % CONFIG.colors.length],
+            delay: index * 105,
+            travel: randomBetween(260, 440) / CONFIG.boltSpeed,
+            hit: false,
+          };
+        });
+        volleys.push({ startedAt: now, bolts, particles: [] });
+        if (!animationFrame) draw(now);
+      }
+
+      // Prepares a visual element for the effect.
+      function addImpact(volley, bolt) {
+        volley.particles.push({
+          type: "ring",
+          x: bolt.targetX,
+          y: bolt.targetY,
+          color: bolt.color,
+          bornAt: performance.now(),
+        });
+        for (let index = 0; index < CONFIG.sparkCount; index += 1) {
+          const angle =
+            (Math.PI * 2 * index) / CONFIG.sparkCount + Math.random() * 0.35;
+          volley.particles.push({
+            type: "spark",
+            x: bolt.targetX,
+            y: bolt.targetY,
+            vx: Math.cos(angle) * randomBetween(55, 210),
+            vy: Math.sin(angle) * randomBetween(55, 210),
+            size: randomBetween(2, 5),
+            color: bolt.color,
+            bornAt: performance.now(),
+          });
+        }
+      }
+
+      // Draws the current animation state.
+      function drawBolt(bolt, progress) {
+        const x = bolt.startX + (bolt.targetX - bolt.startX) * progress;
+        const y = bolt.startY + (bolt.targetY - bolt.startY) * progress;
+        const tail = 0.14;
+        const tailX =
+          bolt.startX +
+          (bolt.targetX - bolt.startX) * Math.max(0, progress - tail);
+        const tailY =
+          bolt.startY +
+          (bolt.targetY - bolt.startY) * Math.max(0, progress - tail);
+        context.save();
+        context.strokeStyle = bolt.color;
+        context.lineWidth = CONFIG.boltWidth;
+        context.lineCap = "square";
+        context.shadowBlur = 20;
+        context.shadowColor = bolt.color;
+        context.beginPath();
+        context.moveTo(tailX, tailY);
+        context.lineTo(x, y);
+        context.stroke();
+        context.fillStyle = "#ffffff";
+        context.fillRect(x - 2, y - 2, 4, 4);
+        context.restore();
+      }
+
+      // Draws the current animation state.
+      function drawParticle(particle, now) {
+        const age = now - particle.bornAt;
+        if (particle.type === "ring") {
+          const life = 420;
+          if (age >= life) return false;
+          const progress = age / life;
+          context.save();
+          context.globalAlpha = 1 - progress;
+          context.strokeStyle = particle.color;
+          context.lineWidth = 3;
+          context.shadowBlur = 16;
+          context.shadowColor = particle.color;
+          context.beginPath();
+          context.arc(
+            particle.x,
+            particle.y,
+            8 + CONFIG.impactRadius * progress,
+            0,
+            Math.PI * 2,
+          );
+          context.stroke();
+          context.restore();
+          return true;
+        }
+
+        const life = 620;
+        if (age >= life) return false;
+        const seconds = age / 1000;
+        context.save();
+        context.globalAlpha = 1 - age / life;
+        context.fillStyle = particle.color;
+        context.shadowBlur = 10;
+        context.shadowColor = particle.color;
+        context.fillRect(
+          particle.x + particle.vx * seconds,
+          particle.y + particle.vy * seconds,
+          particle.size,
+          particle.size,
+        );
+        context.restore();
+        return true;
+      }
+
+      // Draws the current animation state.
+      function draw(now) {
+        context.clearRect(0, 0, width, height);
+        for (
+          let volleyIndex = volleys.length - 1;
+          volleyIndex >= 0;
+          volleyIndex -= 1
+        ) {
+          const volley = volleys[volleyIndex];
+          const elapsed = now - volley.startedAt;
+          for (const bolt of volley.bolts) {
+            const boltTime = elapsed - bolt.delay;
+            if (boltTime >= 0 && boltTime < bolt.travel)
+              drawBolt(bolt, boltTime / bolt.travel);
+            if (boltTime >= bolt.travel && !bolt.hit) {
+              bolt.hit = true;
+              addImpact(volley, bolt);
+            }
+          }
+          volley.particles = volley.particles.filter((particle) =>
+            drawParticle(particle, now),
+          );
+          if (elapsed > CONFIG.duration && volley.particles.length === 0)
+            volleys.splice(volleyIndex, 1);
+        }
+        if (volleys.length) animationFrame = requestAnimationFrame(draw);
+        else animationFrame = undefined;
+      }
+
+      resize();
+      // ==========================================
+      // 3. CALLBACK (COMFYJS)
+      // ==========================================
+
+      window.addEventListener("resize", resize);
+
+      if (location.search.includes("preview")) triggerPewPew();
+
+      if (TWITCH.enabled) {
+        ComfyJS.onCommand = (_, command, _message, _flags, extra) => {
+          if (`!${command}`.toLowerCase() !== TWITCH.command.toLowerCase())
+            return;
+          if (
+            extra.sinceLastCommand.any > 0 &&
+            extra.sinceLastCommand.any < TWITCH.globalCooldown
+          )
+            return;
+          if (
+            extra.sinceLastCommand.user > 0 &&
+            extra.sinceLastCommand.user < TWITCH.userCooldown
+          )
+            return;
+          triggerPewPew();
+        };
+        ComfyJS.Init(TWITCH.channel);
+      }
+    </script>
+  </body>
+</html>
