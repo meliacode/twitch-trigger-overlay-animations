@@ -17,9 +17,12 @@ No build step is required for the animations themselves. Each source lives in it
 | Meteor Shower           | `!meteor-shower`      | [`src/meteor-shower/meteor-shower.html`](src/meteor-shower/meteor-shower.html)                                         |
 | Party Lights Laser      | `!party-laser`        | [`src/party-lights-laser/party-lights-laser.html`](src/party-lights-laser/party-lights-laser.html)                     |
 | Party Lights Spotlights | `!party-spotlights`   | [`src/party-lights-spotlights/party-lights-spotlights.html`](src/party-lights-spotlights/party-lights-spotlights.html) |
+| Sakura Petal Storm      | `!sakura-storm`       | [`src/sakura-petal-storm/sakura-petal-storm.html`](src/sakura-petal-storm/sakura-petal-storm.html)                     |
 | Spread Love Rainbow     | `!spreadlove`         | [`src/spread-love-rainbow/spread-love-rainbow.html`](src/spread-love-rainbow/spread-love-rainbow.html)                 |
+| Starry Sky              | `!starry-sky`         | [`src/starry-sky/starry-sky.html`](src/starry-sky/starry-sky.html)                                                     |
 | Swarm of Butterflies    | `!butterflies`        | [`src/swarm-of-butterflies/swarm-of-butterflies.html`](src/swarm-of-butterflies/swarm-of-butterflies.html)             |
 | Torrential Rain         | `!torrential-rain`    | [`src/torrential-rain/torrential-rain.html`](src/torrential-rain/torrential-rain.html)                                 |
+| Underwater              | `!underwater`         | [`src/underwater/underwater.html`](src/underwater/underwater.html)                                                     |
 
 ## Get started
 
