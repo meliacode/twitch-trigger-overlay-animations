@@ -1,0 +1,949 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hellfire Candles</title>
+
+    <style>
+      /* Transparent background is required for OBS overlays */
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: transparent;
+        font-family: sans-serif;
+      }
+
+      /* Canvas styling for OBS overlays */
+      canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+      }
+    </style>
+
+    <script src="https://cdn.jsdelivr.net/npm/comfy.js@latest/dist/comfy.min.js"></script>
+  </head>
+  <body>
+    <canvas id="hellfire-candles-canvas"></canvas>
+
+    <script>
+      // ==========================================
+      // 1. CONFIGURATION
+      // ==========================================
+
+      const CONFIG = {
+        autoCycle: true,
+        delay: 25000,
+        duration: 1000,
+        candleCount: 4,
+        candleScale: 1,
+        hellGlow: true,
+        embers: true,
+        waxColor: "#efe4cc",
+        flameColor: "#ffb53d",
+        flameCoreColor: "#fff3c4",
+        hellfireColors: ["#ff3a0a", "#ff7b00", "#c80000", "#ffb300"],
+      };
+
+      const LOCAL_CONFIG = {
+        fadeInDuration: 1200,
+        sizeRatio: 0.13,
+        groupX: 0.5,
+        groupY: 0.58,
+        candleSpacing: 0.62,
+        verticalOffset: 0.22,
+        minHeightFactor: 0.85,
+        maxHeightFactor: 1.3,
+        minDepth: 0.75,
+        maxDepth: 1.1,
+        floatAmplitude: 0.07,
+        minFloatSpeed: 0.55,
+        maxFloatSpeed: 0.95,
+        tiltAngle: 3,
+        riseDuration: 500,
+        fallDuration: 900,
+        flareStagger: 90,
+        flareHeight: 4,
+        flareWidth: 0.9,
+        flareTremble: 0.012,
+        flickerStrength: 0.12,
+        dripsPerCandle: 3,
+        minDripTime: 7,
+        maxDripTime: 15,
+        dripHoldTime: 3,
+        dripFadeTime: 4,
+        meltBoost: 2.5,
+        dropChance: 0.45,
+        dropGravity: 3,
+        emberIdleRate: 0.25,
+        emberFlareRate: 30,
+        emberMinLife: 1.2,
+        emberMaxLife: 2.6,
+        maxEmbers: 500,
+      };
+
+      const TWITCH = {
+        enabled: false,
+        channel: "your_twitch_channel",
+        command: "!hellfire",
+        globalCooldown: 500,
+        userCooldown: 5000,
+      };
+
+      // ==========================================
+      // 2. CONSTANTS
+      // ==========================================
+
+      const canvas = document.querySelector("#hellfire-candles-canvas");
+      const context = canvas.getContext("2d");
+
+      const colorProbe = document
+        .createElement("canvas")
+        .getContext("2d", { willReadFrequently: true });
+
+      const WHITE = { r: 255, g: 255, b: 255 };
+      const BLACK = { r: 0, g: 0, b: 0 };
+      const WICK = { r: 38, g: 26, b: 20 };
+
+      const flare = {
+        nextFlareAt: 0,
+        activeFrom: -Infinity,
+        activeUntil: -Infinity,
+        intensity: 0,
+      };
+
+      const candles = [];
+      const embers = [];
+      const drops = [];
+
+      let palette = null;
+      let width = 0;
+      let height = 0;
+      let appearedAt = performance.now();
+      let lastFrameAt = appearedAt;
+
+      // Resize the canvas backing store for crisp rendering.
+      function resizeCanvas() {
+        const pixelRatio = window.devicePixelRatio || 1;
+
+        width = window.innerWidth;
+        height = window.innerHeight;
+        canvas.width = Math.round(width * pixelRatio);
+        canvas.height = Math.round(height * pixelRatio);
+        context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+      }
+
+      window.addEventListener("resize", resizeCanvas);
+      resizeCanvas();
+
+      // ==========================================
+      // 3. ANIMATION
+      // ==========================================
+
+      // Returns a random number within the requested range.
+      function randomBetween(min, max) {
+        return min + Math.random() * (max - min);
+      }
+
+      // Blends two numbers by a 0-1 amount.
+      function lerp(from, to, amount) {
+        return from + (to - from) * amount;
+      }
+
+      // Keeps a value inside a range.
+      function clamp(value, min, max) {
+        return Math.min(max, Math.max(min, value));
+      }
+
+      // Smooths both ends of a 0-1 transition.
+      function easeInOutSine(value) {
+        return -(Math.cos(Math.PI * value) - 1) / 2;
+      }
+
+      // Slows a 0-1 transition down towards its end.
+      function easeOutCubic(value) {
+        return 1 - Math.pow(1 - value, 3);
+      }
+
+      // Returns smooth pseudo-random motion between -1 and 1.
+      function softNoise(time, seed) {
+        return (
+          (Math.sin(time * 1.7 + seed) +
+            Math.sin(time * 3.1 + seed * 2.3) +
+            Math.sin(time * 5.3 + seed * 0.7)) /
+          3
+        );
+      }
+
+      // Converts any CSS colour into RGB channels so it can be blended.
+      function parseColor(color) {
+        colorProbe.clearRect(0, 0, 1, 1);
+        colorProbe.fillStyle = "#000000";
+        colorProbe.fillStyle = color;
+        colorProbe.fillRect(0, 0, 1, 1);
+
+        const [r, g, b] = colorProbe.getImageData(0, 0, 1, 1).data;
+
+        return { r, g, b };
+      }
+
+      // Blends two RGB colours by a 0-1 amount.
+      function mixColor(from, to, amount) {
+        return {
+          r: lerp(from.r, to.r, amount),
+          g: lerp(from.g, to.g, amount),
+          b: lerp(from.b, to.b, amount),
+        };
+      }
+
+      // Formats an RGB colour as a canvas colour string.
+      function toRgba(color, alpha = 1) {
+        return `rgba(${Math.round(color.r)}, ${Math.round(color.g)}, ${Math.round(color.b)}, ${clamp(alpha, 0, 1)})`;
+      }
+
+      // Parses the configured colours once.
+      function buildPalette() {
+        const hellfire = CONFIG.hellfireColors.map(parseColor);
+
+        while (hellfire.length < 4) {
+          hellfire.push(hellfire[hellfire.length - 1] || { ...WHITE });
+        }
+
+        return {
+          wax: parseColor(CONFIG.waxColor),
+          flame: parseColor(CONFIG.flameColor),
+          core: parseColor(CONFIG.flameCoreColor),
+          hellfire,
+        };
+      }
+
+      // Converts a candle-local point into screen coordinates.
+      function localToWorld(candle, x, y) {
+        const cos = Math.cos(candle.tilt);
+        const sin = Math.sin(candle.tilt);
+
+        return {
+          x: candle.screenX + x * cos - y * sin,
+          y: candle.screenY + x * sin + y * cos,
+        };
+      }
+
+      // Returns the depth of the top rim's front edge at a horizontal offset.
+      function rimDepth(candle, x) {
+        const ratio = clamp(x / candle.radiusX, -1, 1);
+
+        return candle.radiusY * Math.sqrt(1 - ratio * ratio);
+      }
+
+      // Starts a new wax drip at a random spot on the candle's front face.
+      function resetDrip(drip, randomProgress) {
+        drip.offset = randomBetween(-0.75, 0.75);
+        drip.thickness = randomBetween(0.22, 0.34);
+        drip.maxLength = randomBetween(0.15, 0.55);
+        drip.speed =
+          1 / randomBetween(LOCAL_CONFIG.minDripTime, LOCAL_CONFIG.maxDripTime);
+        drip.progress = randomProgress ? Math.random() : 0;
+        drip.hold = LOCAL_CONFIG.dripHoldTime * randomBetween(0.6, 1.4);
+        drip.alpha = 1;
+        drip.state = "grow";
+      }
+
+      // Returns the base candle size before depth is applied.
+      function baseUnit() {
+        return (
+          Math.min(width, height) * LOCAL_CONFIG.sizeRatio * CONFIG.candleScale
+        );
+      }
+
+      // Clusters the floating candles together in the centre of the source.
+      function createCandles() {
+        const middle = (CONFIG.candleCount - 1) / 2;
+
+        candles.length = 0;
+
+        for (let index = 0; index < CONFIG.candleCount; index += 1) {
+          const drips = [];
+
+          for (let drip = 0; drip < LOCAL_CONFIG.dripsPerCandle; drip += 1) {
+            const state = {};
+
+            resetDrip(state, true);
+            drips.push(state);
+          }
+
+          candles.push({
+            offsetX:
+              (index - middle + randomBetween(-0.12, 0.12)) *
+              LOCAL_CONFIG.candleSpacing,
+            offsetY:
+              (index % 2 === 0 ? -1 : 1) *
+              LOCAL_CONFIG.verticalOffset *
+              randomBetween(0.5, 1),
+            depth: randomBetween(LOCAL_CONFIG.minDepth, LOCAL_CONFIG.maxDepth),
+            heightFactor: randomBetween(
+              LOCAL_CONFIG.minHeightFactor,
+              LOCAL_CONFIG.maxHeightFactor,
+            ),
+            floatSpeed: randomBetween(
+              LOCAL_CONFIG.minFloatSpeed,
+              LOCAL_CONFIG.maxFloatSpeed,
+            ),
+            phase: Math.random() * Math.PI * 2,
+            seed: Math.random() * 100,
+            progress: 0,
+            intensity: 0,
+            emberDebt: 0,
+            drips,
+          });
+        }
+
+        // Fire climbs from the lowest candle to the highest one.
+        candles
+          .slice()
+          .sort((first, second) => second.offsetY - first.offsetY)
+          .forEach((candle, order) => {
+            candle.stagger = order * LOCAL_CONFIG.flareStagger;
+          });
+
+        // Far (smaller) candles are drawn first.
+        candles.sort((first, second) => first.depth - second.depth);
+      }
+
+      // Opens the gates of hell, or extends an active flare.
+      function triggerHellfire() {
+        const now = performance.now();
+
+        if (now >= flare.activeUntil) flare.activeFrom = now;
+
+        flare.activeUntil = now + LOCAL_CONFIG.riseDuration + CONFIG.duration;
+        flare.nextFlareAt =
+          flare.activeUntil +
+          LOCAL_CONFIG.fallDuration +
+          LOCAL_CONFIG.flareStagger * CONFIG.candleCount +
+          CONFIG.delay;
+      }
+
+      // Starts an automatic flare once the calm delay has elapsed.
+      function updateFlare(now) {
+        if (!CONFIG.autoCycle) return;
+
+        if (now >= flare.nextFlareAt && now >= flare.activeUntil) {
+          triggerHellfire();
+        }
+      }
+
+      // Adds a glowing ember rising from a flame.
+      function spawnEmber(candle) {
+        const { hellfire } = palette;
+        const color = hellfire[Math.floor(Math.random() * hellfire.length)];
+
+        embers.push({
+          x: candle.flameX + randomBetween(-1, 1) * candle.flameWidth,
+          y: candle.flameY - candle.flameHeight * randomBetween(0.2, 0.8),
+          vx: randomBetween(-0.25, 0.25) * candle.unit,
+          vy: -randomBetween(0.6, 1.6) * candle.unit,
+          sway: randomBetween(0.1, 0.35) * candle.unit,
+          phase: Math.random() * Math.PI * 2,
+          size: randomBetween(1.2, 3) * candle.depth,
+          life: randomBetween(
+            LOCAL_CONFIG.emberMinLife,
+            LOCAL_CONFIG.emberMaxLife,
+          ),
+          age: 0,
+          color: mixColor(color, WHITE, Math.random() * 0.35),
+        });
+      }
+
+      // Releases a wax drop from underneath a candle.
+      function spawnDrop(candle, drip) {
+        const x = drip.offset * candle.radiusX;
+        const point = localToWorld(
+          candle,
+          x,
+          candle.bodyHeight + rimDepth(candle, x),
+        );
+
+        drops.push({
+          x: point.x,
+          y: point.y,
+          vy: 0,
+          size: drip.thickness * candle.radiusX * 0.55,
+          gravity: LOCAL_CONFIG.dropGravity * candle.unit,
+          age: 0,
+          life: 1.4,
+          color: candle.waxColor,
+        });
+      }
+
+      // Grows, holds and melts each wax drip, faster during hellfire.
+      function updateDrips(candle, delta) {
+        const melt = 1 + LOCAL_CONFIG.meltBoost * candle.intensity;
+
+        for (const drip of candle.drips) {
+          if (drip.state === "grow") {
+            drip.progress += delta * drip.speed * melt;
+
+            if (drip.progress >= 1) {
+              drip.progress = 1;
+              drip.state = "hold";
+
+              if (Math.random() < LOCAL_CONFIG.dropChance) {
+                spawnDrop(candle, drip);
+              }
+            }
+          } else if (drip.state === "hold") {
+            drip.hold -= delta * melt;
+            if (drip.hold <= 0) drip.state = "fade";
+          } else {
+            drip.alpha -= delta / LOCAL_CONFIG.dripFadeTime;
+            if (drip.alpha <= 0) resetDrip(drip, false);
+          }
+        }
+      }
+
+      // Updates one candle's float, flare intensity, flame and wax.
+      function updateCandle(candle, delta, now, time) {
+        const active =
+          now >= flare.activeFrom + candle.stagger &&
+          now < flare.activeUntil + candle.stagger;
+        const rate = active
+          ? (delta * 1000) / LOCAL_CONFIG.riseDuration
+          : (-delta * 1000) / LOCAL_CONFIG.fallDuration;
+
+        candle.progress = clamp(candle.progress + rate, 0, 1);
+        candle.intensity = easeInOutSine(candle.progress);
+        flare.intensity = Math.max(flare.intensity, candle.intensity);
+
+        const intensity = candle.intensity;
+        const groupUnit = baseUnit();
+        const unit = groupUnit * candle.depth;
+        const floatTime = time * candle.floatSpeed + candle.phase;
+        const tremble =
+          Math.sin(time * 9 + candle.seed) *
+          unit *
+          LOCAL_CONFIG.flareTremble *
+          intensity;
+
+        candle.unit = unit;
+        candle.radiusX = unit * 0.16;
+        candle.radiusY = candle.radiusX * 0.25;
+        candle.bodyHeight = unit * candle.heightFactor;
+        candle.screenX =
+          LOCAL_CONFIG.groupX * width +
+          candle.offsetX * groupUnit +
+          Math.sin(floatTime * 0.6) * unit * 0.05 +
+          tremble;
+        candle.screenY =
+          LOCAL_CONFIG.groupY * height +
+          candle.offsetY * groupUnit +
+          Math.sin(floatTime) * LOCAL_CONFIG.floatAmplitude * unit;
+        candle.tilt =
+          (Math.sin(floatTime * 0.8 + 1) * LOCAL_CONFIG.tiltAngle * Math.PI) /
+          180;
+
+        const wickTop = localToWorld(candle, 0, -unit * 0.08);
+        const flicker = softNoise(time * 2.4, candle.seed);
+        const surge = softNoise(time * 1.3, candle.seed + 7);
+
+        candle.flameX = wickTop.x;
+        candle.flameY = wickTop.y + unit * 0.035;
+        candle.flameHeight =
+          unit *
+          0.42 *
+          (1 +
+            flicker * LOCAL_CONFIG.flickerStrength +
+            LOCAL_CONFIG.flareHeight * intensity * (0.85 + 0.15 * surge));
+        candle.flameWidth =
+          unit * 0.085 * (1 + LOCAL_CONFIG.flareWidth * intensity);
+        candle.flameLean =
+          softNoise(time * 1.6, candle.seed + 3) *
+          unit *
+          0.04 *
+          (1 + 2 * intensity);
+
+        updateDrips(candle, delta);
+
+        if (!CONFIG.embers) return;
+
+        candle.emberDebt +=
+          delta *
+          (LOCAL_CONFIG.emberIdleRate +
+            LOCAL_CONFIG.emberFlareRate * intensity);
+
+        while (candle.emberDebt >= 1) {
+          candle.emberDebt -= 1;
+          if (embers.length < LOCAL_CONFIG.maxEmbers) spawnEmber(candle);
+        }
+      }
+
+      // Moves embers and wax drops, recycling the finished ones.
+      function updateParticles(delta, time) {
+        for (let index = embers.length - 1; index >= 0; index -= 1) {
+          const ember = embers[index];
+
+          ember.age += delta;
+          ember.x +=
+            (ember.vx + Math.sin(time * 2 + ember.phase) * ember.sway) * delta;
+          ember.y += ember.vy * delta;
+          ember.vy *= 1 - 0.25 * delta;
+
+          if (ember.age >= ember.life) {
+            embers[index] = embers[embers.length - 1];
+            embers.pop();
+          }
+        }
+
+        for (let index = drops.length - 1; index >= 0; index -= 1) {
+          const drop = drops[index];
+
+          drop.age += delta;
+          drop.vy += drop.gravity * delta;
+          drop.y += drop.vy * delta;
+
+          if (drop.age >= drop.life || drop.y > height + 20) {
+            drops[index] = drops[drops.length - 1];
+            drops.pop();
+          }
+        }
+      }
+
+      // Draws a dark red glow rising from below the candles while they burn.
+      function drawHellGlow() {
+        if (!CONFIG.hellGlow || flare.intensity < 0.01) return;
+
+        const { hellfire } = palette;
+        const centerX = width * LOCAL_CONFIG.groupX;
+        const radius = height * 0.8;
+        const gradient = context.createRadialGradient(
+          centerX,
+          height * 1.05,
+          0,
+          centerX,
+          height * 1.05,
+          radius,
+        );
+
+        gradient.addColorStop(0, toRgba(hellfire[2], 0.4 * flare.intensity));
+        gradient.addColorStop(
+          0.45,
+          toRgba(hellfire[0], 0.14 * flare.intensity),
+        );
+        gradient.addColorStop(1, toRgba(hellfire[0], 0));
+
+        context.fillStyle = gradient;
+        context.fillRect(
+          centerX - radius,
+          height * 1.05 - radius,
+          radius * 2,
+          radius,
+        );
+      }
+
+      // Adds the outline of a candle body (without its top) to the path.
+      function traceBody(candle) {
+        const { radiusX, radiusY, bodyHeight } = candle;
+
+        context.beginPath();
+        context.moveTo(-radiusX, 0);
+        context.lineTo(-radiusX, bodyHeight);
+        context.ellipse(0, bodyHeight, radiusX, radiusY, 0, Math.PI, 0, true);
+        context.lineTo(radiusX, 0);
+        context.ellipse(0, 0, radiusX, radiusY, 0, 0, Math.PI, false);
+        context.closePath();
+      }
+
+      // Draws the slowly growing wax drips on the candle's front face.
+      function drawDrips(candle, light, shade) {
+        const { radiusX } = candle;
+
+        for (const drip of candle.drips) {
+          const length =
+            easeOutCubic(drip.progress) * drip.maxLength * candle.bodyHeight;
+
+          if (length < 1 || drip.alpha <= 0) continue;
+
+          const x = drip.offset * radiusX;
+          const top = rimDepth(candle, x) - candle.radiusY * 0.4;
+          const bottom = top + length;
+          const halfWidth = drip.thickness * radiusX * 0.5;
+          const bead = halfWidth * 1.25;
+          const edge = Math.abs(drip.offset);
+          const color = mixColor(light, shade, edge * edge * 0.7);
+
+          context.fillStyle = toRgba(color, drip.alpha);
+          context.beginPath();
+          context.moveTo(x - halfWidth * 1.5, top);
+          context.quadraticCurveTo(
+            x - halfWidth,
+            top + halfWidth,
+            x - halfWidth * 0.8,
+            bottom - bead * 0.5,
+          );
+          context.arc(x, bottom, bead, Math.PI * 1.15, Math.PI * 1.85, true);
+          context.quadraticCurveTo(
+            x + halfWidth,
+            top + halfWidth,
+            x + halfWidth * 1.5,
+            top,
+          );
+          context.closePath();
+          context.fill();
+          context.strokeStyle = toRgba(shade, 0.55 * drip.alpha);
+          context.lineWidth = Math.max(1, halfWidth * 0.3);
+          context.stroke();
+
+          context.fillStyle = toRgba(WHITE, 0.35 * drip.alpha);
+          context.beginPath();
+          context.ellipse(
+            x - bead * 0.3,
+            bottom - bead * 0.25,
+            bead * 0.25,
+            bead * 0.35,
+            0,
+            0,
+            Math.PI * 2,
+          );
+          context.fill();
+        }
+      }
+
+      // Draws one floating candle body with its melted top and wick.
+      function drawCandle(candle, time, opacity) {
+        const { radiusX, radiusY, bodyHeight, unit, intensity } = candle;
+        const { hellfire } = palette;
+        const fireColor = mixColor(palette.flame, hellfire[0], intensity);
+        const distance = (LOCAL_CONFIG.maxDepth - candle.depth) * 0.6;
+        const wax = mixColor(
+          mixColor(palette.wax, BLACK, distance),
+          hellfire[2],
+          0.18 * intensity,
+        );
+        const light = mixColor(wax, WHITE, 0.3);
+        const shade = mixColor(wax, BLACK, 0.4);
+
+        candle.waxColor = light;
+
+        context.save();
+        context.globalAlpha = opacity;
+        context.translate(candle.screenX, candle.screenY);
+        context.rotate(candle.tilt);
+
+        const bodyGradient = context.createLinearGradient(
+          -radiusX,
+          0,
+          radiusX,
+          0,
+        );
+
+        bodyGradient.addColorStop(0, toRgba(shade));
+        bodyGradient.addColorStop(0.3, toRgba(light));
+        bodyGradient.addColorStop(0.65, toRgba(wax));
+        bodyGradient.addColorStop(1, toRgba(mixColor(shade, BLACK, 0.2)));
+
+        traceBody(candle);
+        context.fillStyle = bodyGradient;
+        context.fill();
+
+        // Warm light from the flame spilling down the wax.
+        context.save();
+        context.clip();
+        const spill = context.createRadialGradient(
+          0,
+          -unit * 0.2,
+          0,
+          0,
+          -unit * 0.2,
+          bodyHeight * (0.6 + 0.6 * intensity),
+        );
+
+        spill.addColorStop(0, toRgba(fireColor, 0.32 + 0.3 * intensity));
+        spill.addColorStop(1, toRgba(fireColor, 0));
+        context.fillStyle = spill;
+        context.fillRect(
+          -radiusX,
+          -radiusY,
+          radiusX * 2,
+          bodyHeight + radiusY * 2,
+        );
+        context.restore();
+
+        drawDrips(candle, light, shade);
+
+        // Melted top surface and its glowing pool of wax.
+        context.fillStyle = toRgba(mixColor(light, fireColor, 0.2));
+        context.beginPath();
+        context.ellipse(0, 0, radiusX, radiusY, 0, 0, Math.PI * 2);
+        context.fill();
+
+        context.fillStyle = toRgba(fireColor, 0.35 + 0.4 * intensity);
+        context.beginPath();
+        context.ellipse(
+          0,
+          radiusY * 0.1,
+          radiusX * 0.72,
+          radiusY * 0.62,
+          0,
+          0,
+          Math.PI * 2,
+        );
+        context.fill();
+
+        context.strokeStyle = toRgba(WHITE, 0.25);
+        context.lineWidth = Math.max(1, unit * 0.008);
+        context.beginPath();
+        context.ellipse(0, 0, radiusX, radiusY, 0, 0, Math.PI);
+        context.stroke();
+
+        // Wick, glowing at its tip.
+        const wickSway = softNoise(time * 1.6, candle.seed + 3) * unit * 0.01;
+
+        context.strokeStyle = toRgba(WICK);
+        context.lineWidth = Math.max(1, unit * 0.014);
+        context.lineCap = "round";
+        context.beginPath();
+        context.moveTo(0, radiusY * 0.1);
+        context.quadraticCurveTo(0, -unit * 0.04, wickSway, -unit * 0.08);
+        context.stroke();
+
+        context.restore();
+      }
+
+      // Adds a teardrop flame outline whose base sits at (x, y).
+      function traceFlame(x, y, halfWidth, flameHeight, lean) {
+        const tipX = x + lean;
+        const tipY = y - flameHeight;
+        const waist = y - flameHeight * 0.25;
+
+        context.beginPath();
+        context.moveTo(tipX, tipY);
+        context.bezierCurveTo(
+          lerp(tipX, x + halfWidth, 0.35),
+          y - flameHeight * 0.7,
+          x + halfWidth,
+          y - flameHeight * 0.5,
+          x + halfWidth,
+          waist,
+        );
+        context.bezierCurveTo(
+          x + halfWidth,
+          y + halfWidth * 0.6,
+          x - halfWidth,
+          y + halfWidth * 0.6,
+          x - halfWidth,
+          waist,
+        );
+        context.bezierCurveTo(
+          x - halfWidth,
+          y - flameHeight * 0.5,
+          lerp(tipX, x - halfWidth, 0.35),
+          y - flameHeight * 0.7,
+          tipX,
+          tipY,
+        );
+        context.closePath();
+      }
+
+      // Fills a flame outline with a vertical fire gradient.
+      function fillFlame(x, y, halfWidth, flameHeight, lean, base, top, alpha) {
+        const gradient = context.createLinearGradient(x, y, x, y - flameHeight);
+
+        gradient.addColorStop(0, toRgba(base, alpha));
+        gradient.addColorStop(0.55, toRgba(top, alpha * 0.8));
+        gradient.addColorStop(1, toRgba(top, 0));
+
+        traceFlame(x, y, halfWidth, flameHeight, lean);
+        context.fillStyle = gradient;
+        context.fill();
+      }
+
+      // Draws a candle flame, which roars into hellfire with intensity.
+      function drawFlame(candle, time, opacity) {
+        const { hellfire } = palette;
+        const {
+          flameX: x,
+          flameY: y,
+          flameWidth: halfWidth,
+          flameHeight,
+          flameLean: lean,
+          intensity,
+          unit,
+        } = candle;
+        const outer = mixColor(palette.flame, hellfire[1], intensity);
+        const deep = mixColor(
+          palette.flame,
+          hellfire[2],
+          0.25 + 0.6 * intensity,
+        );
+        const core = mixColor(palette.core, hellfire[3], intensity * 0.45);
+        const glowRadius = unit * (0.7 + 2.4 * intensity);
+        const glowY = y - flameHeight * 0.35;
+        const glow = context.createRadialGradient(
+          x,
+          glowY,
+          0,
+          x,
+          glowY,
+          glowRadius,
+        );
+
+        context.save();
+        context.globalAlpha = opacity;
+        context.globalCompositeOperation = "lighter";
+
+        glow.addColorStop(0, toRgba(outer, 0.32 + 0.25 * intensity));
+        glow.addColorStop(0.4, toRgba(deep, 0.12 + 0.12 * intensity));
+        glow.addColorStop(1, toRgba(deep, 0));
+        context.fillStyle = glow;
+        context.fillRect(
+          x - glowRadius,
+          glowY - glowRadius,
+          glowRadius * 2,
+          glowRadius * 2,
+        );
+
+        // Extra licking tongues of fire around the main flame.
+        if (intensity > 0.02) {
+          for (const offset of [-1, -0.45, 0.45, 1]) {
+            const wave = softNoise(time * 2.2, candle.seed + offset * 11);
+            const tongueHeight =
+              flameHeight * (0.45 + 0.2 * wave) * (1 - Math.abs(offset) * 0.3);
+
+            fillFlame(
+              x + offset * halfWidth * 0.75,
+              y + halfWidth * 0.2,
+              halfWidth * 0.55,
+              tongueHeight * intensity,
+              lean * 1.4 + offset * halfWidth * 0.8 * wave,
+              hellfire[0],
+              hellfire[2],
+              0.75 * intensity,
+            );
+          }
+        }
+
+        fillFlame(x, y, halfWidth, flameHeight, lean, outer, deep, 0.95);
+        fillFlame(
+          x,
+          y,
+          halfWidth * 0.5,
+          flameHeight * 0.55,
+          lean * 0.6,
+          core,
+          outer,
+          0.95,
+        );
+
+        context.restore();
+      }
+
+      // Draws falling wax drops.
+      function drawDrops(opacity) {
+        for (const drop of drops) {
+          const alpha = (1 - drop.age / drop.life) * opacity;
+
+          context.fillStyle = toRgba(drop.color, alpha);
+          context.beginPath();
+          context.ellipse(
+            drop.x,
+            drop.y,
+            drop.size,
+            drop.size * (1.2 + Math.min(1, drop.vy / 400)),
+            0,
+            0,
+            Math.PI * 2,
+          );
+          context.fill();
+        }
+      }
+
+      // Draws glowing embers drifting upwards.
+      function drawEmbers(opacity) {
+        context.save();
+        context.globalCompositeOperation = "lighter";
+
+        for (const ember of embers) {
+          const progress = ember.age / ember.life;
+          const alpha = Math.sin(Math.PI * progress) * opacity;
+          const size = ember.size * (1 - progress * 0.5);
+
+          context.fillStyle = toRgba(ember.color, 0.22 * alpha);
+          context.beginPath();
+          context.arc(ember.x, ember.y, size * 3, 0, Math.PI * 2);
+          context.fill();
+
+          context.fillStyle = toRgba(mixColor(ember.color, WHITE, 0.4), alpha);
+          context.beginPath();
+          context.arc(ember.x, ember.y, size, 0, Math.PI * 2);
+          context.fill();
+        }
+
+        context.restore();
+      }
+
+      // Updates and draws one frame of the floating candles.
+      function renderFrame(now) {
+        const delta = Math.min(0.05, (now - lastFrameAt) / 1000);
+        const time = now / 1000;
+        const opacity = clamp(
+          (now - appearedAt) / LOCAL_CONFIG.fadeInDuration,
+          0,
+          1,
+        );
+
+        lastFrameAt = now;
+        updateFlare(now);
+        flare.intensity = 0;
+
+        for (const candle of candles) updateCandle(candle, delta, now, time);
+        updateParticles(delta, time);
+
+        context.clearRect(0, 0, width, height);
+
+        drawHellGlow();
+
+        for (const candle of candles) {
+          drawCandle(candle, time, opacity);
+          drawFlame(candle, time, opacity);
+        }
+
+        drawDrops(opacity);
+        drawEmbers(opacity);
+
+        requestAnimationFrame(renderFrame);
+      }
+
+      palette = buildPalette();
+      createCandles();
+      flare.nextFlareAt = appearedAt + CONFIG.delay;
+      requestAnimationFrame(renderFrame);
+
+      // ==========================================
+      // 3. CALLBACK (COMFYJS)
+      // ==========================================
+
+      if (location.search.includes("preview")) triggerHellfire();
+
+      if (TWITCH.enabled) {
+        ComfyJS.onCommand = (_user, command, _message, _flags, extra) => {
+          if (`!${command}`.toLowerCase() !== TWITCH.command.toLowerCase())
+            return;
+          if (
+            (extra.sinceLastCommand.any > 0 &&
+              extra.sinceLastCommand.any < TWITCH.globalCooldown) ||
+            (extra.sinceLastCommand.user > 0 &&
+              extra.sinceLastCommand.user < TWITCH.userCooldown)
+          )
+            return;
+          triggerHellfire();
+        };
+        ComfyJS.Init(TWITCH.channel);
+      }
+    </script>
+  </body>
+</html>
