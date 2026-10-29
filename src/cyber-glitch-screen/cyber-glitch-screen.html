@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cyber Glitch Screen</title>
+
+    <style>
+      /* Transparent background is required for OBS overlays */
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: transparent;
+        font-family: sans-serif;
+      }
+
+      #glitch-stage,
+      .glitch-burst,
+      .glitch-slice,
+      .scanlines,
+      .signal {
+        pointer-events: none;
+      }
+
+      #glitch-stage {
+        position: fixed;
+        inset: 0;
+        overflow: hidden;
+      }
+
+      .glitch-burst {
+        position: absolute;
+        inset: 0;
+        animation: burst-life var(--duration) steps(1, end) forwards;
+      }
+
+      .glitch-burst::before,
+      .glitch-burst::after {
+        position: absolute;
+        inset: 0;
+        content: "";
+        mix-blend-mode: screen;
+      }
+
+      .glitch-burst::before {
+        opacity: 0.24;
+        background: repeating-linear-gradient(
+          90deg,
+          var(--cyan) 0 2px,
+          transparent 2px 8px,
+          var(--pink) 8px 10px,
+          transparent 10px 18px
+        );
+        animation: chroma-shift 160ms steps(2, end) 6;
+      }
+
+      .glitch-burst::after {
+        opacity: 0;
+        background: var(--flash);
+        animation: impact-flash 210ms ease-out;
+      }
+
+      .scanlines {
+        position: absolute;
+        inset: 0;
+        opacity: 0.46;
+        background: repeating-linear-gradient(
+          0deg,
+          rgba(255, 255, 255, 0.16) 0 1px,
+          transparent 1px 5px
+        );
+        mix-blend-mode: overlay;
+        animation: scan-jump 110ms steps(2, end) 9;
+      }
+
+      .glitch-slice {
+        position: absolute;
+        left: -8%;
+        width: 116%;
+        height: var(--height);
+        top: var(--top);
+        opacity: 0;
+        background: linear-gradient(
+          90deg,
+          transparent 0 8%,
+          var(--color) 8% 25%,
+          transparent 25% 36%,
+          var(--color) 36% 69%,
+          transparent 69% 82%,
+          var(--color) 82% 94%,
+          transparent 94%
+        );
+        box-shadow: 0 0 18px var(--color);
+        mix-blend-mode: screen;
+        animation: slice-glitch var(--slice-duration) steps(2, end) var(--delay)
+          forwards;
+      }
+
+      .signal {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: min(72vw, 980px);
+        transform: translate(-50%, -50%);
+        color: var(--cyan);
+        font-family: "Courier New", monospace;
+        font-size: clamp(18px, 4.1vw, 62px);
+        font-weight: 900;
+        letter-spacing: 0.2em;
+        text-align: center;
+        text-shadow:
+          5px 0 var(--pink),
+          -4px 0 var(--cyan),
+          0 0 16px var(--cyan);
+        opacity: 0;
+        white-space: nowrap;
+        animation: signal-glitch 360ms steps(2, end) 130ms forwards;
+      }
+
+      @keyframes burst-life {
+        0%,
+        82% {
+          opacity: 1;
+        }
+        100% {
+          opacity: 0;
+        }
+      }
+
+      @keyframes chroma-shift {
+        0%,
+        100% {
+          transform: translateX(0);
+        }
+        35% {
+          transform: translateX(-3.5vw);
+        }
+        68% {
+          transform: translateX(4vw);
+        }
+      }
+
+      @keyframes impact-flash {
+        0% {
+          opacity: 0.42;
+        }
+        100% {
+          opacity: 0;
+        }
+      }
+
+      @keyframes scan-jump {
+        0%,
+        100% {
+          transform: translateY(0);
+        }
+        45% {
+          transform: translateY(9px);
+        }
+      }
+
+      @keyframes slice-glitch {
+        0% {
+          opacity: 0;
+          transform: translateX(0) scaleX(0.1);
+        }
+        18%,
+        76% {
+          opacity: var(--opacity);
+        }
+        35% {
+          transform: translateX(var(--shift)) scaleX(1);
+        }
+        62% {
+          transform: translateX(calc(var(--shift) * -0.55)) scaleX(0.55);
+        }
+        100% {
+          opacity: 0;
+          transform: translateX(0) scaleX(0);
+        }
+      }
+
+      @keyframes signal-glitch {
+        0% {
+          opacity: 0;
+          transform: translate(-50%, -50%) skewX(-20deg) scaleX(1.25);
+        }
+        25% {
+          opacity: 1;
+          transform: translate(calc(-50% + 16px), -50%) skewX(9deg);
+        }
+        52% {
+          transform: translate(calc(-50% - 9px), -50%) skewX(-5deg);
+        }
+        100% {
+          opacity: 0;
+          transform: translate(-50%, -50%) scaleX(0.25);
+        }
+      }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/comfy.js@latest/dist/comfy.min.js"></script>
+  </head>
+  <body>
+    <div id="glitch-stage"></div>
+
+    <script>
+      // ==========================================
+      // 1. CONFIGURATION
+      // ==========================================
+      const CONFIG = {
+        duration: 1300,
+        sliceCount: 19,
+        minSliceHeight: 3,
+        maxSliceHeight: 42,
+        cyanColor: "#00f6ff",
+        pinkColor: "#ff2bd6",
+        flashColor: "#e9fbff",
+        message: "SIGNAL // CORRUPTED",
+      };
+
+      const LOCAL_CONFIG = {};
+
+      const TWITCH = {
+        enabled: false,
+        channel: "your_twitch_channel",
+        command: "!cyber-glitch",
+        globalCooldown: 500,
+        userCooldown: 5000,
+      };
+
+      // ==========================================
+      // 2. CONSTANTS
+      // ==========================================
+
+      const stage = document.querySelector("#glitch-stage");
+      const randomBetween = (minimum, maximum) =>
+        minimum + Math.random() * (maximum - minimum);
+
+      // ==========================================
+      // 3. ANIMATION
+      // ==========================================
+
+      function triggerGlitch() {
+        const burst = document.createElement("section");
+        burst.className = "glitch-burst";
+        burst.style.setProperty("--duration", `${CONFIG.duration}ms`);
+        burst.style.setProperty("--cyan", CONFIG.cyanColor);
+        burst.style.setProperty("--pink", CONFIG.pinkColor);
+        burst.style.setProperty("--flash", CONFIG.flashColor);
+
+        const scanlines = document.createElement("div");
+        scanlines.className = "scanlines";
+        burst.append(scanlines);
+
+        for (let index = 0; index < CONFIG.sliceCount; index += 1) {
+          const slice = document.createElement("div");
+          slice.className = "glitch-slice";
+          slice.style.setProperty("--top", `${randomBetween(2, 96)}%`);
+          slice.style.setProperty(
+            "--height",
+            `${randomBetween(CONFIG.minSliceHeight, CONFIG.maxSliceHeight)}px`,
+          );
+          slice.style.setProperty(
+            "--color",
+            index % 2 ? CONFIG.cyanColor : CONFIG.pinkColor,
+          );
+          slice.style.setProperty("--shift", `${randomBetween(-18, 18)}vw`);
+          slice.style.setProperty("--opacity", randomBetween(0.35, 0.88));
+          slice.style.setProperty("--delay", `${randomBetween(0, 420)}ms`);
+          slice.style.setProperty(
+            "--slice-duration",
+            `${randomBetween(220, 650)}ms`,
+          );
+          burst.append(slice);
+        }
+
+        const signal = document.createElement("div");
+        signal.className = "signal";
+        signal.textContent = CONFIG.message;
+        burst.append(signal);
+        stage.append(burst);
+
+        window.setTimeout(() => burst.remove(), CONFIG.duration);
+      }
+
+      // ==========================================
+      // 3. CALLBACK (COMFYJS)
+      // ==========================================
+
+      if (location.search.includes("preview")) triggerGlitch();
+
+      if (TWITCH.enabled) {
+        ComfyJS.onCommand = (_, command, _message, _flags, extra) => {
+          if (`!${command}`.toLowerCase() !== TWITCH.command.toLowerCase())
+            return;
+          if (
+            extra.sinceLastCommand.any > 0 &&
+            extra.sinceLastCommand.any < TWITCH.globalCooldown
+          )
+            return;
+          if (
+            extra.sinceLastCommand.user > 0 &&
+            extra.sinceLastCommand.user < TWITCH.userCooldown
+          )
+            return;
+          triggerGlitch();
+        };
+        ComfyJS.Init(TWITCH.channel);
+      }
+    </script>
+  </body>
+</html>
